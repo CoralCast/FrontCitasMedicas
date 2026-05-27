@@ -197,13 +197,15 @@ export default function Cita() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      <aside className="w-64 bg-white shadow-lg p-6 flex flex-col justify-between">
+    <div className="appointment-page min-h-screen bg-gray-100 flex">
+      <aside className="appointment-sidebar w-72 bg-white border-r border-slate-100 p-6 flex flex-col justify-between">
         <div>
-          <div className="flex items-center gap-3 mb-10">
-            <div className="w-12 h-12 rounded-full bg-blue-500" />
+          <div className="flex items-center gap-3 mb-10 border-b border-slate-100 pb-6">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-sm font-semibold text-blue-700">
+              {user?.correo?.[0]?.toUpperCase() || "U"}
+            </div>
             <div>
-              <h2 className="font-bold text-gray-800">
+              <h2 className="font-semibold text-gray-800">
                 {user?.correo || "Usuario"}
               </h2>
               <p className="text-sm text-gray-500">{user?.rol || "cliente"}</p>
@@ -213,13 +215,13 @@ export default function Cita() {
           <nav className="space-y-3">
             <Link
               to="/cita"
-              className="block w-full text-left bg-blue-100 text-blue-700 font-semibold px-4 py-3 rounded-xl"
+              className="appointment-nav-item block w-full text-left bg-blue-50 text-blue-700 font-semibold px-4 py-3 rounded-xl"
             >
               Agendar Cita
             </Link>
             <Link
               to="/historial"
-              className="block w-full text-left text-gray-600 hover:bg-gray-100 px-4 py-3 rounded-xl"
+              className="appointment-nav-item block w-full text-left text-gray-600 hover:bg-gray-100 px-4 py-3 rounded-xl"
             >
               Historial
             </Link>
@@ -229,20 +231,22 @@ export default function Cita() {
         <button
           type="button"
           onClick={logout}
-          className="block w-full text-left text-red-500 hover:bg-red-50 px-4 py-3 rounded-xl"
+          className="appointment-logout block w-full text-left text-red-500 hover:bg-red-50 px-4 py-3 rounded-xl"
         >
           Cerrar sesion
         </button>
       </aside>
 
-      <main className="flex-1 p-8">
-        <div className="flex justify-between items-center mb-8">
+      <main className="appointment-main flex-1 p-8">
+        <div className="appointment-header flex justify-between items-center mb-8 border-b border-slate-200 pb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Agendar Nueva Cita</h1>
+            <h1 className="text-3xl font-semibold text-gray-800">Agendar nueva cita</h1>
             <p className="text-gray-500">Completa los datos para confirmar tu cita medica</p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-gray-300" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600">
+              {paciente?.nombre_completo?.[0] || "P"}
+            </div>
             <span className="font-medium">{paciente?.nombre_completo || "Sin paciente"}</span>
           </div>
         </div>
@@ -259,12 +263,12 @@ export default function Cita() {
         )}
 
         {loading ? (
-          <div className="bg-white rounded-3xl p-8 shadow-sm">Cargando datos...</div>
+          <div className="appointment-card bg-white rounded-3xl border border-slate-100 p-8 shadow-sm">Cargando datos...</div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
-              <section className="bg-white rounded-3xl p-6 shadow-sm">
-                <h2 className="text-xl font-bold mb-6">Informacion de la cita</h2>
+              <section className="appointment-card bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+                <h2 className="text-xl font-semibold mb-6">Informacion de la cita</h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div>
@@ -275,7 +279,7 @@ export default function Cita() {
                       <button
                         type="button"
                         onClick={() => setMostrarModal(true)}
-                        className="w-9 h-9 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xl font-bold flex items-center justify-center"
+                        className="w-9 h-9 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xl font-semibold flex items-center justify-center"
                         aria-label="Agregar paciente"
                       >
                         +
@@ -319,19 +323,21 @@ export default function Cita() {
                         onClick={() => setDoctorSeleccionado(item.id_doctor)}
                         className={`rounded-2xl p-4 flex items-center justify-between text-left cursor-pointer transition-all ${
                           doctorSeleccionado === item.id_doctor
-                            ? "border-2 border-blue-500"
+                            ? "border-2 border-blue-500 bg-blue-50"
                             : "border border-gray-200"
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-full bg-blue-100" />
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600">
+                            {item.nombre_completo?.[0] || "D"}
+                          </div>
                           <div>
-                            <h3 className="font-bold">{item.nombre_completo}</h3>
+                            <h3 className="font-semibold">{item.nombre_completo}</h3>
                             <p className="text-sm text-gray-500">{item.especialidad}</p>
                           </div>
                         </div>
                         {doctorSeleccionado === item.id_doctor && (
-                          <div className="w-6 h-6 rounded-full bg-blue-500" />
+                          <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />
                         )}
                       </button>
                     ))}
@@ -339,8 +345,8 @@ export default function Cita() {
                 </div>
               </section>
 
-              <section className="bg-white rounded-3xl p-6 shadow-sm">
-                <h2 className="text-xl font-bold mb-6">Fecha y Hora</h2>
+              <section className="appointment-card bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+                <h2 className="text-xl font-semibold mb-6">Fecha y hora</h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
@@ -353,7 +359,7 @@ export default function Cita() {
                       className="w-full bg-gray-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <p className="text-sm text-gray-500 mt-4">Fecha seleccionada:</p>
-                    <p className="font-bold text-gray-800 capitalize">{fechaFormateada}</p>
+                    <p className="font-semibold text-gray-800 capitalize">{fechaFormateada}</p>
                   </div>
 
                   <div>
@@ -386,8 +392,8 @@ export default function Cita() {
                 </div>
               </section>
 
-              <section className="bg-white rounded-3xl p-6 shadow-sm">
-                <h2 className="text-xl font-bold mb-6">Detalles Adicionales</h2>
+              <section className="appointment-card bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+                <h2 className="text-xl font-semibold mb-6">Detalles adicionales</h2>
                 <label className="text-sm font-semibold text-gray-600 block mb-2">
                   DESCRIBE EL MOTIVO DE LA CONSULTA
                 </label>
@@ -401,10 +407,10 @@ export default function Cita() {
               </section>
             </div>
 
-            <aside>
-              <div className="bg-white rounded-3xl p-6 shadow-sm sticky top-6">
-                <h2 className="text-2xl font-bold mb-6">Resumen de Cita</h2>
-                <div className="space-y-5">
+            <aside className="appointment-summary-wrap">
+              <div className="appointment-summary bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+                <h2 className="text-2xl font-semibold mb-6">Resumen de cita</h2>
+                <div className="appointment-summary-content space-y-5">
                   <div>
                     <p className="text-sm text-gray-500">PACIENTE</p>
                     <h3 className="font-bold">{paciente?.nombre_completo || "Sin seleccionar"}</h3>
@@ -429,7 +435,7 @@ export default function Cita() {
                       <p className="text-gray-500">Consulta General</p>
                       <p className="text-sm text-gray-400">Pago en consulta</p>
                     </div>
-                    <h2 className="text-3xl font-bold text-blue-600">
+                    <h2 className="text-2xl font-semibold text-blue-600">
                       {formatMoney(doctor?.precio_consulta)}
                     </h2>
                   </div>
@@ -450,8 +456,8 @@ export default function Cita() {
 
       {mostrarModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-50">
-          <form onSubmit={agregarPaciente} className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-2xl">
-            <h2 className="text-3xl font-bold text-gray-800 mb-2">Agregar paciente</h2>
+          <form onSubmit={agregarPaciente} className="bg-white rounded-3xl border border-slate-100 shadow-xl p-8 w-full max-w-2xl">
+            <h2 className="text-3xl font-semibold text-gray-800 mb-2">Agregar paciente</h2>
             <p className="text-gray-500 mb-8">Registra los datos que solicita el backend.</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">

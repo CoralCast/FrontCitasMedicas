@@ -1,14 +1,20 @@
-@import url("https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700;800;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@200..700&family=Outfit:wght@100..900&family=Paytone+One&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap");
 @import "tailwindcss";
 
 :root {
+  --brand-deep: #075a66;
+  --brand: #0d8794;
+  --brand-soft: #dff3f5;
+  --brand-ink: #12333b;
+  --surface: #ffffff;
+  --page: #eaf6f7;
   font-family:
-    "Source Sans 3",
+    "Outfit",
     "Segoe UI",
     Arial,
     sans-serif;
-  color: #1f2937;
-  background: #eef5f4;
+  color: var(--brand-ink);
+  background: var(--page);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -20,8 +26,8 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background:
-    linear-gradient(180deg, rgba(238, 245, 244, 0.95), rgba(248, 250, 252, 0.98)),
-    #eef5f4;
+    linear-gradient(135deg, rgba(7, 90, 102, 0.08), transparent 34%),
+    linear-gradient(180deg, #f4fbfb 0%, #eaf6f7 100%);
 }
 
 button,
@@ -31,29 +37,26 @@ textarea {
   font: inherit;
 }
 
-/* Tema visual hospitalario:
-   Mantiene la logica y clases existentes, pero cambia la app a una paleta
-   mas clinica/formal: verde medico, azul petroleo, gris pizarra y blancos. */
 [class~="bg-gray-100"],
 [class~="bg-slate-100"] {
-  background-color: #eef5f4 !important;
+  background-color: #edf7f8 !important;
 }
 
 [class~="bg-gray-50"],
 [class~="bg-slate-50"] {
-  background-color: #f7faf9 !important;
+  background-color: #f6fbfb !important;
 }
 
 [class~="bg-blue-50"],
 [class~="bg-indigo-50"],
 [class~="bg-purple-50"] {
-  background-color: #e7f3f1 !important;
+  background-color: var(--brand-soft) !important;
 }
 
 [class~="bg-blue-100"],
 [class~="bg-indigo-100"],
 [class~="bg-purple-100"] {
-  background-color: #d7ece8 !important;
+  background-color: #c9ecf0 !important;
 }
 
 [class~="bg-blue-500"],
@@ -61,18 +64,18 @@ textarea {
 [class~="bg-blue-700"],
 [class~="bg-blue-800"],
 [class~="bg-indigo-700"] {
-  background-color: #0f766e !important;
+  background-color: var(--brand) !important;
 }
 
 [class~="hover:bg-blue-700"]:hover,
 [class~="hover:bg-blue-800"]:hover,
 [class~="hover:bg-indigo-800"]:hover {
-  background-color: #115e59 !important;
+  background-color: var(--brand-deep) !important;
 }
 
 [class~="disabled:bg-blue-300"]:disabled,
 [class~="disabled:bg-indigo-300"]:disabled {
-  background-color: #9fc9c2 !important;
+  background-color: #8fc9cf !important;
 }
 
 [class~="text-blue-600"],
@@ -82,18 +85,18 @@ textarea {
 [class~="text-indigo-900"],
 [class~="text-purple-700"],
 [class~="text-purple-900"] {
-  color: #0f766e !important;
+  color: var(--brand) !important;
 }
 
 [class~="text-gray-800"],
 [class~="text-slate-900"] {
-  color: #1f2937 !important;
+  color: var(--brand-ink) !important;
 }
 
 [class~="text-gray-500"],
 [class~="text-slate-500"],
 [class~="text-slate-400"] {
-  color: #64748b !important;
+  color: #5f7b83 !important;
 }
 
 [class~="border-blue-500"],
@@ -101,37 +104,434 @@ textarea {
 [class~="border-indigo-700"],
 [class~="hover:border-blue-500"]:hover,
 [class~="hover:border-indigo-300"]:hover {
-  border-color: #0f766e !important;
+  border-color: var(--brand) !important;
 }
 
 [class~="focus:ring-blue-500"]:focus,
 [class~="focus:ring-indigo-200"]:focus {
-  --tw-ring-color: rgba(15, 118, 110, 0.28) !important;
+  --tw-ring-color: rgba(13, 135, 148, 0.22) !important;
 }
 
 [class~="shadow-xl"],
 [class~="shadow-2xl"],
 [class~="shadow-lg"],
 [class~="shadow-sm"] {
-  box-shadow: 0 14px 35px rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 18px 46px rgba(7, 90, 102, 0.14) !important;
 }
 
 [class~="rounded-3xl"],
 [class~="rounded-[2rem]"] {
-  border-radius: 1rem !important;
+  border-radius: 0.5rem !important;
 }
 
 [class~="rounded-2xl"] {
-  border-radius: 0.75rem !important;
+  border-radius: 0.5rem !important;
 }
 
 [class~="rounded-xl"] {
-  border-radius: 0.625rem !important;
+  border-radius: 0.5rem !important;
+}
+
+[class~="rounded-full"] {
+  border-radius: 999px;
+}
+
+[class~="font-black"] {
+  font-weight: 700 !important;
+}
+
+[class~="font-bold"] {
+  font-weight: 650 !important;
+}
+
+[class~="tracking-[0.18em]"] {
+  letter-spacing: 0.08em !important;
+}
+
+[class~="bg-[#eef5f4]"],
+[class~="bg-[#f8f7fc]"],
+[class~="bg-[#fbfaff]"] {
+  background-color: var(--page) !important;
+}
+
+aside[class*="bg-white"],
+header[class*="bg-white"],
+section[class*="bg-white"],
+article[class*="bg-white"],
+form[class*="bg-white"],
+div[class*="bg-white"] {
+  border-color: rgba(13, 135, 148, 0.16);
+}
+
+button {
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+button:hover {
+  transform: none !important;
+}
+
+input,
+select,
+textarea {
+  border: 1px solid rgba(13, 135, 148, 0.16);
+  color: var(--brand-ink);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(13, 135, 148, 0.16);
 }
 
 h1,
 h2,
 h3,
 h4 {
+  font-family:
+    "Paytone One",
+    "Outfit",
+    "Segoe UI",
+    Arial,
+    sans-serif;
   letter-spacing: 0;
+}
+
+.auth-screen {
+  background:
+    radial-gradient(ellipse at top left, rgba(255, 255, 255, 0.9), transparent 38%),
+    linear-gradient(135deg, #fffdf8 0%, #f8efe2 100%) !important;
+}
+
+.auth-card {
+  border: 1px solid rgba(255, 255, 255, 0.34);
+}
+
+.auth-visual {
+  position: relative;
+  min-height: 620px;
+  overflow: hidden;
+  background:
+    linear-gradient(145deg, rgba(13, 135, 148, 0.96), rgba(7, 90, 102, 0.98)) !important;
+}
+
+.auth-visual::before {
+  content: "";
+  position: absolute;
+  inset: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+}
+
+.auth-visual-card {
+  position: relative;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.auth-form {
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f8fcfc 100%);
+}
+
+button[class*="bg-blue"],
+a[class*="bg-blue"] {
+  border-radius: 999px !important;
+}
+
+aside {
+  background:
+    linear-gradient(180deg, #0d8794 0%, #075a66 100%) !important;
+  color: white;
+}
+
+aside h1,
+aside h2,
+aside h3,
+aside h4,
+aside p,
+aside span,
+aside a,
+aside button,
+aside div {
+  color: #ffffff !important;
+}
+
+aside [class*="bg-white"],
+aside [class*="bg-slate"],
+aside [class*="bg-blue-50"],
+aside [class*="bg-blue-100"] {
+  background-color: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+aside [class*="text-gray"],
+aside [class*="text-slate"],
+aside [class*="text-blue"],
+aside [class*="text-indigo"],
+aside [class*="text-red"] {
+  color: #ffffff !important;
+}
+
+aside nav a,
+aside nav button {
+  color: #ffffff !important;
+}
+
+aside nav a:hover,
+aside nav button:hover {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+aside nav a,
+aside nav button {
+  border-radius: 999px !important;
+}
+
+main {
+  background:
+    linear-gradient(180deg, #f6fbfb 0%, #eaf6f7 100%);
+}
+
+.appointment-page {
+  background: #eaf6f7 !important;
+}
+
+.appointment-page main,
+.appointment-main {
+  background:
+    linear-gradient(180deg, #f6fbfb 0%, #eaf6f7 100%) !important;
+}
+
+.appointment-header,
+.appointment-card,
+.appointment-summary {
+  border: 1px solid rgba(13, 135, 148, 0.16) !important;
+  border-radius: 1rem !important;
+  background: #ffffff !important;
+  box-shadow: 0 18px 46px rgba(7, 90, 102, 0.1) !important;
+}
+
+.appointment-header {
+  padding: 1.5rem;
+}
+
+.appointment-card,
+.appointment-summary {
+  padding: 1.5rem;
+}
+
+.appointment-sidebar {
+  justify-content: space-between !important;
+  gap: 2rem;
+}
+
+.appointment-nav-item {
+  display: flex !important;
+  align-items: center !important;
+  min-height: 60px;
+  border-radius: 999px !important;
+  padding-inline: 1.25rem !important;
+  font-weight: 700 !important;
+}
+
+.appointment-sidebar > button {
+  margin-top: auto;
+  background-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+.appointment-logout {
+  display: flex !important;
+  align-items: center !important;
+  min-height: 60px;
+  border-radius: 0.5rem !important;
+  padding-inline: 1.25rem !important;
+  font-weight: 700 !important;
+}
+
+.appointment-summary-wrap {
+  align-self: start;
+  background: transparent !important;
+  color: var(--brand-ink) !important;
+}
+
+.appointment-summary {
+  position: static !important;
+  top: auto !important;
+  padding: 1.25rem !important;
+  border-color: #d9c9b1 !important;
+  background: #fffaf2 !important;
+  box-shadow: 0 14px 34px rgba(88, 64, 34, 0.1) !important;
+}
+
+.appointment-summary,
+.appointment-summary h2,
+.appointment-summary h3,
+.appointment-summary p,
+.appointment-summary div {
+  color: var(--brand-ink) !important;
+}
+
+.appointment-summary button {
+  color: #ffffff !important;
+}
+
+.appointment-summary h2 {
+  margin-bottom: 1rem !important;
+}
+
+.appointment-summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem !important;
+}
+
+.appointment-summary-content > div {
+  border-radius: 0.75rem;
+}
+
+.appointment-summary-content hr {
+  border-color: #e8dbc8;
+  margin: 0.25rem 0 !important;
+}
+
+.appointment-page input,
+.appointment-page select,
+.appointment-page textarea {
+  background-color: #edf7f8 !important;
+  border-color: rgba(13, 135, 148, 0.16) !important;
+}
+
+.appointment-page button[class*="border"]:not([class*="bg-blue"]),
+.appointment-page section button[class*="rounded-2xl"]:not([class*="bg-blue"]) {
+  background-color: #ffffff;
+  border-color: rgba(13, 135, 148, 0.18) !important;
+}
+
+.appointment-page button[class*="border-blue"],
+.appointment-page button[class*="bg-blue"] {
+  border-color: var(--brand) !important;
+}
+
+.appointment-page button[class*="bg-blue"] {
+  color: #ffffff !important;
+}
+
+.appointment-page .appointment-card:nth-of-type(2) {
+  border-color: rgba(129, 116, 85, 0.2) !important;
+}
+
+.reception-page {
+  background: #eaf6f7 !important;
+}
+
+.reception-main {
+  background:
+    linear-gradient(180deg, #f7fbfb 0%, #eaf6f7 100%) !important;
+}
+
+.reception-sidebar {
+  background:
+    linear-gradient(180deg, #0d8794 0%, #075a66 100%) !important;
+  color: #ffffff !important;
+}
+
+.reception-sidebar h1,
+.reception-sidebar p,
+.reception-sidebar span,
+.reception-sidebar button {
+  color: #ffffff !important;
+}
+
+.reception-sidebar [class*="bg-slate"],
+.reception-sidebar [class*="bg-blue-50"] {
+  background-color: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.reception-sidebar nav button {
+  border-radius: 999px !important;
+}
+
+.reception-sidebar nav button:hover {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+.reception-header,
+.reception-card {
+  border: 1px solid rgba(13, 135, 148, 0.16) !important;
+  border-radius: 1rem !important;
+  background: #ffffff !important;
+  box-shadow: 0 18px 46px rgba(7, 90, 102, 0.1) !important;
+}
+
+.reception-header {
+  margin: 1.5rem;
+  padding: 1.5rem !important;
+}
+
+.reception-page input,
+.reception-page select,
+.reception-page textarea {
+  background-color: #edf7f8 !important;
+  border-color: rgba(13, 135, 148, 0.16) !important;
+}
+
+.reception-page table thead {
+  background-color: #edf7f8 !important;
+}
+
+.reception-page button[class*="bg-blue"] {
+  color: #ffffff !important;
+}
+
+.doctor-sidebar,
+.reception-sidebar {
+  justify-content: space-between !important;
+  gap: 2rem;
+}
+
+.doctor-nav-item,
+.reception-nav-item {
+  min-height: 60px;
+  border-radius: 999px !important;
+  padding-inline: 1.25rem !important;
+  font-weight: 700 !important;
+}
+
+.doctor-logout,
+.reception-logout {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 60px;
+  margin-top: 1.5rem;
+  border-radius: 999px !important;
+  font-weight: 700 !important;
+}
+
+aside > button {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 60px !important;
+  width: 100% !important;
+  margin-top: auto !important;
+  border-radius: 999px !important;
+  background-color: #0d8794 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+}
+
+aside > button:hover {
+  background-color: #0b7480 !important;
 }

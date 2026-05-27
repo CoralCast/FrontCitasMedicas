@@ -23,7 +23,15 @@ export default function Login() {
       // Guia: despues del login se consulta GET /auth/me para traer rol y usuario.
       const userData = await getMe()
       saveSession(authData, userData)
-      navigate(userData.rol === "doctor" ? "/doctor" : "/cita", { replace: true })
+      if (userData.rol === "doctor") {
+        navigate("/doctor", { replace: true })
+      } else if (userData.rol === "admin") {
+        navigate("/admin", { replace: true })
+      } else if (userData.rol === "recepcionista") {
+        navigate("/recepcion", { replace: true })
+      } else {
+        navigate("/cita", { replace: true })
+      }
     } catch (err) {
       setError(err.message)
     } finally {
@@ -32,21 +40,16 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
-      <div className="w-full max-w-5xl bg-white rounded-3xl shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-2">
-        <div className="bg-blue-700 flex items-center justify-center p-10">
-          <div className="w-full h-full rounded-2xl bg-white/10 p-8 text-white">
-            <h2 className="text-3xl font-bold">Clinica San Rafael</h2>
-            <p className="mt-4 text-sm leading-6 text-white/85">
-              Sistema institucional para la gestion de citas medicas,
-              pacientes y agenda clinica.
-            </p>
+    <div className="auth-screen min-h-screen bg-gray-100 flex items-center justify-center p-6">
+      <div className="auth-card w-full max-w-5xl bg-white rounded-3xl shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-2">
+        <div className="auth-visual bg-blue-700 flex items-center justify-center p-10">
+          <div className="auth-visual-card w-full h-full rounded-2xl bg-white/10 p-8 text-white">
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-10 flex flex-col justify-center">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">Bienvenido</h1>
-          <p className="text-gray-500 mb-8">Ingresa tus datos para continuar</p>
+        <form onSubmit={handleSubmit} className="auth-form p-10 flex flex-col justify-center">
+          <h1 className="text-4xl font-bold text-center text-gray-800 mb-2">Bienvenido</h1>
+          <p className="text-center text-gray-500 mb-8">Ingresa tus datos para continuar</p>
 
           <div className="mb-5">
             <label className="block text-sm font-semibold text-gray-600 mb-2">

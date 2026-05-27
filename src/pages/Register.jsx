@@ -93,22 +93,20 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
-      <div className="w-full max-w-6xl bg-white rounded-3xl shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-[0.85fr_1.15fr]">
-        <div className="hidden md:flex flex-col justify-between bg-blue-700 p-10 text-white">
+    <div className="auth-screen min-h-screen bg-gray-100 flex items-center justify-center p-6">
+      <div className="auth-card w-full max-w-6xl bg-white rounded-3xl shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-[0.85fr_1.15fr]">
+        <div className="auth-visual hidden md:flex flex-col justify-between bg-blue-700 p-10 text-white">
           <div>
-            <h1 className="text-3xl font-black">Clinica San Rafael</h1>
-            <p className="mt-3 text-blue-100">
-              Alta de paciente titular conectada al sistema clinico multi-sucursal.
-            </p>
+            
+            
           </div>
 
          
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 md:p-10">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">Crear Cuenta</h1>
-          <p className="text-gray-500 mb-8">
+        <form onSubmit={handleSubmit} className="auth-form p-8 md:p-10">
+          <h1 className="text-4xl font-bold text-center text-gray-800 mb-2">Crear Cuenta</h1>
+          <p className="text-center text-gray-500 mb-8">
             Selecciona una clinica y registra al paciente titular.
           </p>
 
