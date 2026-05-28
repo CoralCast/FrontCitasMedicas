@@ -50,6 +50,7 @@ function statusClass(estado) {
 export default function Recepcion() {
   const navigate = useNavigate()
   const user = getStoredUser()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [citas, setCitas] = useState([])
   const [pacientes, setPacientes] = useState([])
   const [doctores, setDoctores] = useState([])
@@ -319,9 +320,25 @@ export default function Recepcion() {
   }
 
   return (
-    <div className="reception-page min-h-screen bg-gray-100 text-slate-900">
+    <div className={`reception-page min-h-screen bg-gray-100 text-slate-900 ${sidebarOpen ? "sidebar-open" : ""}`}>
+      <button
+        type="button"
+        className="mobile-menu-button"
+        onClick={() => setSidebarOpen((current) => !current)}
+        aria-label="Abrir menu"
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+      <button
+        type="button"
+        className="mobile-menu-backdrop"
+        onClick={() => setSidebarOpen(false)}
+        aria-label="Cerrar menu"
+      />
       <div className="flex min-h-screen bg-white shadow-sm">
-        <aside className="reception-sidebar sticky top-0 grid h-screen w-72 shrink-0 grid-rows-[1fr_auto] border-r border-slate-100 bg-white px-6 py-8">
+        <aside className="app-sidebar reception-sidebar sticky top-0 grid h-screen w-72 shrink-0 grid-rows-[1fr_auto] border-r border-slate-100 bg-white px-6 py-8">
           <div className="min-h-0">
             
 

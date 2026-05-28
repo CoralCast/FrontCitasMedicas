@@ -28,6 +28,7 @@ function statusClass(estado) {
 export default function Historial() {
   const navigate = useNavigate()
   const user = getStoredUser()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [citas, setCitas] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -193,8 +194,24 @@ export default function Historial() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      <aside className="w-64 bg-white shadow-lg p-6 flex flex-col justify-between">
+    <div className={`min-h-screen bg-gray-100 flex ${sidebarOpen ? "sidebar-open" : ""}`}>
+      <button
+        type="button"
+        className="mobile-menu-button"
+        onClick={() => setSidebarOpen((current) => !current)}
+        aria-label="Abrir menu"
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+      <button
+        type="button"
+        className="mobile-menu-backdrop"
+        onClick={() => setSidebarOpen(false)}
+        aria-label="Cerrar menu"
+      />
+      <aside className="app-sidebar w-72 bg-white shadow-lg p-6 flex flex-col justify-between">
         <div>
           <div className="flex items-center gap-3 mb-10">
             <div className="w-12 h-12 rounded-full bg-blue-500" />

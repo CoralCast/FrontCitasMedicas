@@ -53,6 +53,7 @@ function statusClass(estado) {
 export default function CitasDoctor() {
   const navigate = useNavigate()
   const user = getStoredUser()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [citas, setCitas] = useState([])
   const [query, setQuery] = useState("")
   const [viewMode, setViewMode] = useState("hoy")
@@ -218,9 +219,25 @@ export default function CitasDoctor() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 text-slate-900">
+    <div className={`min-h-screen bg-gray-100 text-slate-900 ${sidebarOpen ? "sidebar-open" : ""}`}>
+      <button
+        type="button"
+        className="mobile-menu-button"
+        onClick={() => setSidebarOpen((current) => !current)}
+        aria-label="Abrir menu"
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+      <button
+        type="button"
+        className="mobile-menu-backdrop"
+        onClick={() => setSidebarOpen(false)}
+        aria-label="Cerrar menu"
+      />
       <div className="flex min-h-screen bg-white shadow-sm">
-        <aside className="doctor-sidebar flex w-72 flex-col justify-between border-r border-slate-100 bg-white px-6 py-8">
+        <aside className="app-sidebar doctor-sidebar flex w-72 flex-col justify-between border-r border-slate-100 bg-white px-6 py-8">
           <div>
             <h1 className="mb-10 text-lg font-semibold tracking-tight">Clinica San Rafael</h1>
 

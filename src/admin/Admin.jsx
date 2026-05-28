@@ -75,6 +75,7 @@ function formatDateTime(value) {
 export default function Admin() {
   const navigate = useNavigate()
   const user = getStoredUser()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [activeView, setActiveView] = useState("resumen")
   const [doctores, setDoctores] = useState([])
   const [pacientes, setPacientes] = useState([])
@@ -337,9 +338,25 @@ export default function Admin() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 text-slate-900">
+    <div className={`min-h-screen bg-gray-100 text-slate-900 ${sidebarOpen ? "sidebar-open" : ""}`}>
+      <button
+        type="button"
+        className="mobile-menu-button"
+        onClick={() => setSidebarOpen((current) => !current)}
+        aria-label="Abrir menu"
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+      <button
+        type="button"
+        className="mobile-menu-backdrop"
+        onClick={() => setSidebarOpen(false)}
+        aria-label="Cerrar menu"
+      />
       <div className="flex min-h-screen bg-white shadow-sm">
-        <aside className="sticky top-0 grid h-screen w-72 shrink-0 grid-rows-[1fr_auto] border-r border-slate-100 bg-white px-6 py-8">
+        <aside className="app-sidebar sticky top-0 grid h-screen w-72 shrink-0 grid-rows-[1fr_auto] border-r border-slate-100 bg-white px-6 py-8">
           <div>
 
             <div className="mb-8 rounded-2xl border border-slate-100 bg-slate-50 p-4">
@@ -768,11 +785,11 @@ export default function Admin() {
                   <div className="grid gap-6 xl:grid-cols-[1fr_0.8fr]">
                     <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
                       <h3 className="text-xl font-semibold">
-                        Bloqueos de {selectedDoctor?.nombre_completo || "doctor"}
+                        Dias ausentes de {selectedDoctor?.nombre_completo || "doctor"}
                       </h3>
                       {loadingDoctorData ? (
                         <p className="mt-5 rounded-xl bg-slate-50 p-5 text-sm text-slate-500">
-                          Cargando bloqueos...
+                          Cargando dias ausentes
                         </p>
                       ) : (
                         <div className="mt-5 space-y-3">

@@ -40,9 +40,44 @@ function formatMoney(value) {
   }).format(value)
 }
 
+function toDateKey(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+
+  return `${year}-${month}-${day}`
+}
+
+function todayKey() {
+  return toDateKey(new Date())
+}
+
+function getMonthLabel(date) {
+  return date.toLocaleDateString("es-MX", {
+    month: "long",
+    year: "numeric",
+  })
+}
+
+function getCalendarDays(date) {
+  const year = date.getFullYear()
+  const month = date.getMonth()
+  const firstDay = new Date(year, month, 1)
+  const totalDays = new Date(year, month + 1, 0).getDate()
+  const leadingDays = firstDay.getDay()
+  const days = Array.from({ length: leadingDays }, () => null)
+
+  for (let day = 1; day <= totalDays; day += 1) {
+    days.push(new Date(year, month, day))
+  }
+
+  return days
+}
+
 export default function Cita() {
   const navigate = useNavigate()
   const user = getStoredUser()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [fecha, setFecha] = useState("")
   const [hora, setHora] = useState("")
   const [motivo, setMotivo] = useState("")
@@ -57,6 +92,8 @@ export default function Cita() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [loadingHorarios, setLoadingHorarios] = useState(false)
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date())
+  const [horariosBloques, setHorariosBloques] = useState([])
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
 
@@ -74,6 +111,13 @@ export default function Cita() {
   )
 
   const fechaFormateada = formatDate(fecha)
+  const calendarDays = useMemo(() => getCalendarDays(calendarMonth), [calendarMonth])
+  const selectedDateNoSchedule =
+    Boolean(doctorSeleccionado && fecha && !loadingHorarios && horariosBloques.length === 0)
+  const selectedDateAllBlocked =
+    Boolean(doctorSeleccionado && fecha && !loadingHorarios && horariosBloques.length > 0 && horarios.length === 0)
+  const selectedDateHasNoAvailability = selectedDateNoSchedule || selectedDateAllBlocked
+  const hasBlockedHours = horariosBloques.some((item) => !item.disponible)
 
   useEffect(() => {
     async function loadInitialData() {
@@ -111,6 +155,7 @@ export default function Cita() {
     async function loadAvailability() {
       if (!doctorSeleccionado || !fecha) {
         setHorarios([])
+        setHorariosBloques([])
         setHora("")
         return
       }
@@ -122,10 +167,20 @@ export default function Cita() {
         // Guia: al elegir doctor y fecha se consulta disponibilidad.
         // El backend responde horarios_disponibles para pintarlos como botones.
         const disponibilidad = await getDisponibilidad(doctorSeleccionado, fecha)
-        setHorarios(disponibilidad.horarios_disponibles || [])
+        const libres = disponibilidad.horarios_disponibles || []
+        setHorarios(libres)
+        setHorariosBloques(
+          disponibilidad.horarios ||
+            libres.map((item) => ({
+              ...item,
+              estado: "disponible",
+              disponible: true,
+            })),
+        )
         setHora("")
       } catch (err) {
         setHorarios([])
+        setHorariosBloques([])
         setError(err.message)
       } finally {
         setLoadingHorarios(false)
@@ -142,6 +197,15 @@ export default function Cita() {
 
   function updatePatientForm(field, value) {
     setPatientForm((current) => ({ ...current, [field]: value }))
+  }
+
+  function changeCalendarMonth(offset) {
+    setCalendarMonth((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1))
+  }
+
+  function selectCalendarDate(dateKey) {
+    setFecha(dateKey)
+    setHora("")
   }
 
   async function agregarPaciente(event) {
@@ -197,8 +261,24 @@ export default function Cita() {
   }
 
   return (
-    <div className="appointment-page min-h-screen bg-gray-100 flex">
-      <aside className="appointment-sidebar w-72 bg-white border-r border-slate-100 p-6 flex flex-col justify-between">
+    <div className={`appointment-page min-h-screen bg-gray-100 flex ${sidebarOpen ? "sidebar-open" : ""}`}>
+      <button
+        type="button"
+        className="mobile-menu-button"
+        onClick={() => setSidebarOpen((current) => !current)}
+        aria-label="Abrir menu"
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+      <button
+        type="button"
+        className="mobile-menu-backdrop"
+        onClick={() => setSidebarOpen(false)}
+        aria-label="Cerrar menu"
+      />
+      <aside className="app-sidebar appointment-sidebar w-72 bg-white border-r border-slate-100 p-6 flex flex-col justify-between">
         <div>
           <div className="flex items-center gap-3 mb-10 border-b border-slate-100 pb-6">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-sm font-semibold text-blue-700">
@@ -351,41 +431,115 @@ export default function Cita() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
                     <h3 className="font-semibold mb-4">Selecciona la fecha</h3>
-                    <input
-                      type="date"
-                      value={fecha}
-                      min={new Date().toISOString().slice(0, 10)}
-                      onChange={(event) => setFecha(event.target.value)}
-                      className="w-full bg-gray-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <div className="appointment-calendar">
+                      <div className="appointment-calendar-header">
+                        <button
+                          type="button"
+                          onClick={() => changeCalendarMonth(-1)}
+                          aria-label="Mes anterior"
+                        >
+                          &lt;
+                        </button>
+                        <strong className="capitalize">{getMonthLabel(calendarMonth)}</strong>
+                        <button
+                          type="button"
+                          onClick={() => changeCalendarMonth(1)}
+                          aria-label="Mes siguiente"
+                        >
+                          &gt;
+                        </button>
+                      </div>
+
+                      <div className="appointment-calendar-weekdays">
+                        {["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"].map((day) => (
+                          <span key={day}>{day}</span>
+                        ))}
+                      </div>
+
+                      <div className="appointment-calendar-grid">
+                        {calendarDays.map((day, index) => {
+                          if (!day) {
+                            return <span key={`blank-${index}`} className="appointment-calendar-empty" />
+                          }
+
+                          const dateKey = toDateKey(day)
+                          const status = dateKey < todayKey() ? "past" : "available"
+                          const isSelected = fecha === dateKey
+                          const disabled = status === "past"
+                          const className = [
+                            "appointment-calendar-day",
+                            status || "loading",
+                            isSelected ? "selected" : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")
+
+                          return (
+                            <button
+                              type="button"
+                              key={dateKey}
+                              onClick={() => selectCalendarDate(dateKey)}
+                              disabled={disabled}
+                              className={className}
+                            >
+                              {day.getDate()}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
                     <p className="text-sm text-gray-500 mt-4">Fecha seleccionada:</p>
                     <p className="font-semibold text-gray-800 capitalize">{fechaFormateada}</p>
+                    {selectedDateHasNoAvailability && (
+                      <p className="appointment-unavailable-message">
+                        {selectedDateAllBlocked
+                          ? "Todos los horarios de esta fecha ya estan ocupados o bloqueados."
+                          : "Este doctor no tiene horario registrado para esta fecha."}
+                      </p>
+                    )}
                   </div>
 
                   <div>
                     <h3 className="font-semibold mb-4">Horarios Disponibles</h3>
                     {loadingHorarios ? (
                       <p className="text-gray-500">Consultando disponibilidad...</p>
-                    ) : horarios.length > 0 ? (
+                    ) : horariosBloques.length > 0 ? (
                       <div className="grid grid-cols-2 gap-3">
-                        {horarios.map((time) => (
+                        {horariosBloques.map((time) => (
                           <button
                             type="button"
                             key={`${time.hora_inicio}-${time.hora_fin}`}
-                            onClick={() => setHora(time.hora_inicio)}
-                            className={`border rounded-xl py-3 ${
-                              hora === time.hora_inicio
-                                ? "bg-blue-600 text-white border-blue-600"
-                                : "hover:border-blue-500 hover:text-blue-600"
+                            onClick={() => time.disponible && setHora(time.hora_inicio)}
+                            disabled={!time.disponible}
+                            className={`appointment-time-button border rounded-xl py-3 ${
+                              !time.disponible
+                                ? "occupied"
+                                : hora === time.hora_inicio
+                                  ? "selected"
+                                  : "available"
                             }`}
                           >
                             {time.hora_inicio}
+                            {!time.disponible && (
+                              <span>{time.estado === "bloqueado" ? "Bloqueado" : "Ocupado"}</span>
+                            )}
                           </button>
                         ))}
                       </div>
+                    ) : selectedDateHasNoAvailability ? (
+                      <p className="appointment-unavailable-message">
+                        {selectedDateAllBlocked
+                          ? "Todos los horarios de esta fecha ya estan ocupados o bloqueados."
+                          : "Este doctor no tiene horario registrado para la fecha seleccionada."}
+                      </p>
                     ) : (
                       <p className="rounded-xl bg-gray-50 p-4 text-sm text-gray-500">
                         Selecciona doctor y fecha para ver horarios disponibles.
+                      </p>
+                    )}
+                    {hasBlockedHours && horarios.length > 0 && (
+                      <p className="appointment-calendar-status">
+                        Los horarios en rojo ya estan ocupados o bloqueados.
                       </p>
                     )}
                   </div>

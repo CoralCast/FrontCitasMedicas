@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { clearSession, getStoredUser } from "../services/api"
 
@@ -15,6 +16,7 @@ function formatDate(fecha) {
 export default function Confirmacion() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   // La cita viene de la respuesta de POST /citas.
   // Se muestra lo que regresa el backend: paciente, doctor, fecha, hora y estado.
   const cita = location.state?.cita
@@ -26,8 +28,24 @@ export default function Confirmacion() {
   }
 
   return (
-    <div className="min-h-screen bg-blue-50 flex">
-      <aside className="w-64 bg-white shadow-lg p-6 flex flex-col justify-between">
+    <div className={`min-h-screen bg-blue-50 flex ${sidebarOpen ? "sidebar-open" : ""}`}>
+      <button
+        type="button"
+        className="mobile-menu-button"
+        onClick={() => setSidebarOpen((current) => !current)}
+        aria-label="Abrir menu"
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+      <button
+        type="button"
+        className="mobile-menu-backdrop"
+        onClick={() => setSidebarOpen(false)}
+        aria-label="Cerrar menu"
+      />
+      <aside className="app-sidebar w-72 bg-white shadow-lg p-6 flex flex-col justify-between">
         <div>
           <div className="flex items-center gap-3 mb-10">
             <div className="w-12 h-12 rounded-full bg-blue-500" />
