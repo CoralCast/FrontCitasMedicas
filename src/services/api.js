@@ -1,5 +1,6 @@
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") || "http://127.0.0.1:8010"
+  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") || "http://140.10.5.214:8001";
+export default API_BASE_URL;
 
 // Guia frontend: el backend local corre en http://127.0.0.1:8010.
 // Aqui se guardan el token JWT y los datos del usuario despues del login.
