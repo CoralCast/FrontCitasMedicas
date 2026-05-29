@@ -1,4 +1,6 @@
-# Front Citas Medicas
+# Front Citas Medicas - Hola soy Froon
+# Coral Castillo Escareño 22760231
+
 
 Frontend del sistema de citas medicas desarrollado con React y Vite.
 
