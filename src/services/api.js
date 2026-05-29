@@ -275,6 +275,12 @@ export function cancelCita(idCita) {
   })
 }
 
+export function completeCita(idCita) {
+  return request(`/citas/${idCita}/completar`, {
+    method: "PATCH",
+  })
+}
+
 export function rescheduleCita(idCita, datos) {
   // Contrato de la guia para cliente: reprogramar recibe fecha y hora_inicio.
   // No mandamos hora_fin porque el backend calcula 30 minutos.
