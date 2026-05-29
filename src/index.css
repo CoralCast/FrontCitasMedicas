@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@200..700&family=Outfit:wght@100..900&family=Paytone+One&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap");
 @import "tailwindcss";
 
 :root {
@@ -9,10 +8,9 @@
   --surface: #ffffff;
   --page: #eaf6f7;
   font-family:
-    "Outfit",
-    "Segoe UI",
-    Arial,
-    sans-serif;
+    "Times New Roman",
+    Times,
+    serif;
   color: var(--brand-ink);
   background: var(--page);
   font-synthesis: none;
@@ -195,11 +193,9 @@ h2,
 h3,
 h4 {
   font-family:
-    "Paytone One",
-    "Outfit",
-    "Segoe UI",
-    Arial,
-    sans-serif;
+    "Times New Roman",
+    Times,
+    serif;
   letter-spacing: 0;
 }
 
@@ -240,6 +236,50 @@ h4 {
 .auth-form {
   background:
     linear-gradient(180deg, #ffffff 0%, #f8fcfc 100%);
+}
+
+.register-card {
+  max-height: calc(100vh - 72px);
+}
+
+.register-card .auth-visual {
+  min-height: 540px;
+}
+
+.register-card .auth-form {
+  max-height: calc(100vh - 72px);
+  overflow-y: auto;
+}
+
+.register-card label {
+  margin-bottom: 0.35rem !important;
+  font-size: 0.84rem !important;
+}
+
+.register-card input,
+.register-card select {
+  padding-top: 0.68rem !important;
+  padding-bottom: 0.68rem !important;
+}
+
+.register-card button[type="submit"] {
+  padding-top: 0.85rem !important;
+  padding-bottom: 0.85rem !important;
+}
+
+.register-card-empty {
+  max-height: calc(100vh - 72px);
+}
+
+.register-card-empty .auth-visual,
+.register-card-empty .auth-form {
+  min-height: 640px;
+  max-height: calc(100vh - 72px);
+  overflow: visible;
+}
+
+.register-card-empty .auth-form {
+  display: block;
 }
 
 button[class*="bg-blue"],
@@ -321,12 +361,70 @@ main {
 }
 
 .appointment-header {
-  padding: 1.5rem;
+  padding: 1.15rem;
+}
+
+.appointment-header-patient {
+  position: absolute;
+  right: 1.25rem;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .appointment-card,
 .appointment-summary {
-  padding: 1.5rem;
+  padding: 1.15rem;
+}
+
+.appointment-symptoms {
+  display: grid;
+  gap: 1.1rem;
+}
+
+.appointment-symptom-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.appointment-symptom-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  border: 1px solid rgba(13, 135, 148, 0.18);
+  border-radius: 0.75rem !important;
+  background: #f6fbfb !important;
+  color: var(--brand-ink);
+  font-weight: 700;
+  text-align: center;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.appointment-symptom-chip.selected {
+  border-color: var(--brand);
+  background: var(--brand-soft) !important;
+  color: var(--brand);
+}
+
+.appointment-symptom-chip.other {
+  border-style: dashed;
+}
+
+.appointment-motive-preview {
+  border: 1px solid rgba(13, 135, 148, 0.16);
+  border-radius: 0.75rem;
+  background: #f6fbfb;
+  padding: 0.9rem 1rem;
+}
+
+.appointment-motive-preview p:last-child {
+  margin-top: 0.2rem;
+  font-weight: 700;
+  color: var(--brand-ink);
 }
 
 .appointment-sidebar {
@@ -337,10 +435,52 @@ main {
 .appointment-nav-item {
   display: flex !important;
   align-items: center !important;
-  min-height: 60px;
+  min-height: 54px;
   border-radius: 999px !important;
   padding-inline: 1.25rem !important;
   font-weight: 700 !important;
+}
+
+.appointment-stepper {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.appointment-step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 42px;
+  border: 1px solid rgba(13, 135, 148, 0.18);
+  border-radius: 999px;
+  background: #ffffff !important;
+  color: #5f7b83 !important;
+  font-weight: 700;
+}
+
+.appointment-step span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  background: #edf7f8;
+  color: var(--brand);
+  font-size: 0.8rem;
+}
+
+.appointment-step.active {
+  border-color: var(--brand) !important;
+  background: var(--brand-soft) !important;
+  color: var(--brand-ink) !important;
+}
+
+.appointment-step:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .appointment-sidebar > button {
@@ -351,7 +491,7 @@ main {
 .appointment-logout {
   display: flex !important;
   align-items: center !important;
-  min-height: 60px;
+  min-height: 54px;
   border-radius: 0.5rem !important;
   padding-inline: 1.25rem !important;
   font-weight: 700 !important;
@@ -366,7 +506,7 @@ main {
 .appointment-summary {
   position: static !important;
   top: auto !important;
-  padding: 1.25rem !important;
+  padding: 1rem !important;
   border-color: #d9c9b1 !important;
   background: #fffaf2 !important;
   box-shadow: 0 14px 34px rgba(88, 64, 34, 0.1) !important;
@@ -433,7 +573,7 @@ main {
   border: 1px solid rgba(13, 135, 148, 0.16);
   border-radius: 1rem;
   background: #f8fcfc;
-  padding: 1rem;
+  padding: 0.8rem;
 }
 
 .appointment-calendar-header {
@@ -445,8 +585,8 @@ main {
 }
 
 .appointment-calendar-header button {
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   border: 1px solid rgba(13, 135, 148, 0.18);
   border-radius: 999px;
   background: #ffffff !important;
@@ -474,7 +614,7 @@ main {
 
 .appointment-calendar-empty,
 .appointment-calendar-day {
-  min-height: 40px;
+  min-height: 36px;
 }
 
 .appointment-calendar-day {
@@ -550,7 +690,7 @@ main {
 
 .appointment-time-button {
   display: flex;
-  min-height: 58px;
+  min-height: 50px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -583,7 +723,7 @@ main {
 }
 
 .appointment-time-button span {
-  font-family: "Outfit", "Segoe UI", Arial, sans-serif;
+  font-family: "Times New Roman", Times, serif;
   font-size: 0.72rem;
   font-weight: 700;
 }
@@ -675,6 +815,29 @@ main {
   margin-top: 1.5rem;
   border-radius: 999px !important;
   font-weight: 700 !important;
+}
+
+.doctor-header {
+  min-height: 104px;
+}
+
+.doctor-header-actions {
+  max-width: 48%;
+}
+
+.admin-summary-card,
+.admin-summary-card:hover,
+.admin-summary-card:focus {
+  border-radius: 0 !important;
+}
+
+.admin-summary-card-selected,
+.admin-summary-card-selected:hover,
+.admin-summary-card-selected:focus {
+  border-color: var(--brand) !important;
+  background-color: var(--brand-soft) !important;
+  color: var(--brand) !important;
+  border-radius: 0 !important;
 }
 
 .mobile-menu-button,
@@ -791,23 +954,41 @@ main {
 
   main,
   .appointment-main,
+  .doctor-main,
   .reception-main {
     width: 100% !important;
     padding: 1rem !important;
   }
 
   .appointment-header,
+  .doctor-header,
   .reception-header {
     margin: 0 0 1rem !important;
     padding: 1rem !important;
     flex-direction: column !important;
-    align-items: flex-start !important;
+    align-items: center !important;
     gap: 1rem !important;
+    text-align: center !important;
+  }
+
+  .doctor-header-actions {
+    position: static !important;
+    max-width: none !important;
+    width: 100% !important;
+    transform: none !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
   }
 
   .appointment-header > div,
   .reception-header > div {
     width: 100%;
+  }
+
+  .appointment-header-patient {
+    position: static !important;
+    justify-content: center !important;
+    transform: none !important;
   }
 
   .appointment-card,

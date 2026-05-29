@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import {
   cancelCita,
   clearSession,
+  completeCita,
   getCitas,
   getDisponibilidad,
   getStoredUser,
@@ -31,6 +32,24 @@ function timeText(value) {
   return String(value || "").slice(0, 5)
 }
 
+function citaDateTime(cita) {
+  return new Date(`${cita.fecha}T${timeText(cita.hora_inicio) || "00:00"}`).getTime()
+}
+
+function sortClosestCitas(citas) {
+  const now = Date.now()
+
+  return [...citas].sort((a, b) => {
+    const aTime = citaDateTime(a)
+    const bTime = citaDateTime(b)
+    const aUpcoming = aTime >= now
+    const bUpcoming = bTime >= now
+
+    if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1
+    return aUpcoming ? aTime - bTime : bTime - aTime
+  })
+}
+
 function addMinutes(time, minutes) {
   const [hours, mins] = time.split(":").map(Number)
   const date = new Date()
@@ -57,9 +76,9 @@ export default function CitasDoctor() {
   const [citas, setCitas] = useState([])
   const [query, setQuery] = useState("")
   const [viewMode, setViewMode] = useState("hoy")
+  const [statusFilter, setStatusFilter] = useState("todas")
   const [selectedCita, setSelectedCita] = useState(null)
   const [modalCita, setModalCita] = useState(null)
-  const [notaMedica, setNotaMedica] = useState("")
   const [nuevaFecha, setNuevaFecha] = useState(today)
   const [nuevaHora, setNuevaHora] = useState("")
   const [duracion, setDuracion] = useState("30")
@@ -71,23 +90,29 @@ export default function CitasDoctor() {
   const [notice, setNotice] = useState("")
 
   const sortedCitas = useMemo(
-    () =>
-      [...citas].sort((a, b) =>
-        `${a.fecha} ${a.hora_inicio}`.localeCompare(`${b.fecha} ${b.hora_inicio}`),
-      ),
+    () => sortClosestCitas(citas),
     [citas],
   )
+
+  const pendingCitas = sortedCitas.filter((cita) => cita.estado === "pendiente")
+  const todayCitas = sortedCitas.filter((cita) => cita.fecha === today)
+  const nextCita = pendingCitas.find((cita) => `${cita.fecha}T${timeText(cita.hora_inicio)}` >= `${today}T00:00`)
 
   const visibleCitas = useMemo(() => {
     const search = query.trim().toLowerCase()
     const byDate =
       viewMode === "hoy"
-        ? sortedCitas.filter((cita) => cita.fecha === today)
+        ? (todayCitas.length > 0 ? todayCitas : nextCita ? [nextCita] : [])
         : sortedCitas
 
-    if (!search) return byDate
+    const byStatus =
+      statusFilter === "todas"
+        ? byDate
+        : byDate.filter((cita) => cita.estado === statusFilter)
 
-    return byDate.filter((cita) =>
+    if (!search) return byStatus
+
+    return byStatus.filter((cita) =>
       [
         cita.paciente?.nombre_completo,
         cita.doctor?.especialidad,
@@ -97,11 +122,11 @@ export default function CitasDoctor() {
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(search)),
     )
-  }, [query, sortedCitas, viewMode])
+  }, [nextCita, query, sortedCitas, statusFilter, todayCitas, viewMode])
 
-  const pendingCitas = sortedCitas.filter((cita) => cita.estado === "pendiente")
-  const todayCitas = sortedCitas.filter((cita) => cita.fecha === today)
-  const nextCita = pendingCitas.find((cita) => `${cita.fecha}T${timeText(cita.hora_inicio)}` >= `${today}T00:00`)
+  const doctorProfile = user?.doctor || sortedCitas.find((cita) => cita.doctor)?.doctor
+  const doctorName = doctorProfile?.nombre_completo || "Doctor"
+  const doctorSpecialty = doctorProfile?.especialidad || "Medico"
 
   async function loadCitas() {
     setLoading(true)
@@ -168,7 +193,6 @@ export default function CitasDoctor() {
 
   function openDetail(cita) {
     setSelectedCita(cita)
-    setNotaMedica("")
     setNotice("")
     setError("")
   }
@@ -188,13 +212,30 @@ export default function CitasDoctor() {
     }
   }
 
+  async function handleComplete(cita) {
+    setError("")
+    setNotice("")
+    setSaving(true)
+
+    try {
+      await completeCita(cita.id_cita)
+      setNotice("Cita marcada como completada correctamente.")
+      setSelectedCita(null)
+      await loadCitas()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function handleReschedule(event) {
     event.preventDefault()
     setError("")
     setNotice("")
 
     if (!modalCita || !nuevaFecha || !nuevaHora) {
-      setError("Selecciona nueva fecha y horario para reagendar.")
+      setError("Selecciona una nueva fecha y un horario disponible para reagendar.")
       return
     }
 
@@ -219,7 +260,7 @@ export default function CitasDoctor() {
   }
 
   return (
-    <div className={`min-h-screen bg-gray-100 text-slate-900 ${sidebarOpen ? "sidebar-open" : ""}`}>
+    <div className={`doctor-page h-screen overflow-hidden bg-gray-100 text-slate-900 ${sidebarOpen ? "sidebar-open" : ""}`}>
       <button
         type="button"
         className="mobile-menu-button"
@@ -236,19 +277,19 @@ export default function CitasDoctor() {
         onClick={() => setSidebarOpen(false)}
         aria-label="Cerrar menu"
       />
-      <div className="flex min-h-screen bg-white shadow-sm">
-        <aside className="app-sidebar doctor-sidebar flex w-72 flex-col justify-between border-r border-slate-100 bg-white px-6 py-8">
+      <div className="flex h-screen bg-white shadow-sm">
+        <aside className="app-sidebar doctor-sidebar flex h-screen w-72 flex-col justify-between border-r border-slate-100 bg-white px-6 py-4">
           <div>
-            <h1 className="mb-10 text-lg font-semibold tracking-tight">Clinica San Rafael</h1>
+            
 
             <div className="mb-8 flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-sm font-semibold text-blue-700">
                 Dr
               </div>
               <div>
-                <p className="text-sm font-semibold">Panel medico</p>
+                <p className="text-sm font-semibold">{doctorName}</p>
                 <p className="text-xs font-semibold uppercase text-slate-400">
-                  {user?.rol || "doctor"}
+                  {doctorSpecialty}
                 </p>
               </div>
             </div>
@@ -256,16 +297,11 @@ export default function CitasDoctor() {
             <nav className="space-y-3">
               <button className="doctor-nav-item flex w-full items-center gap-3 rounded-xl bg-blue-50 px-4 py-3 text-left text-sm font-bold text-blue-700">
                 <span className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-600 text-xs text-white">
-                  A
+                  1
                 </span>
                 Agenda Medica
               </button>
-              <button className="doctor-nav-item flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold text-slate-500 hover:bg-slate-50">
-                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-xs text-slate-600">
-                  C
-                </span>
-                Configuracion
-              </button>
+            
             </nav>
           </div>
 
@@ -278,16 +314,16 @@ export default function CitasDoctor() {
           </button>
         </aside>
 
-        <main className="flex-1 bg-gray-50">
-          <header className="flex items-center justify-between border-b border-slate-100 bg-white px-8 py-6">
-            <div className="flex items-center gap-4">
+        <main className="doctor-main h-screen flex-1 overflow-y-auto bg-gray-50">
+          <header className="doctor-header relative border-b border-slate-100 bg-white px-8 py-5">
+            <div className="text-center">
               <h2 className="text-2xl font-semibold">Mi agenda del dia</h2>
-              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase text-blue-700">
+              <p className="mt-1 text-sm font-semibold uppercase text-blue-700">
                 {formatDay(today)}
-              </span>
+              </p>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="doctor-header-actions absolute right-8 top-1/2 flex -translate-y-1/2 items-center gap-4">
               <div className="relative">
                 <input
                   type="search"
@@ -297,9 +333,10 @@ export default function CitasDoctor() {
                   className="w-64 rounded-full border border-slate-100 bg-slate-50 px-5 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              <span className="rounded-full border border-slate-100 bg-slate-50 px-4 py-2 text-sm text-slate-500">
-                {user?.correo || "Doctor"}
-              </span>
+              <div className="rounded-full border border-slate-100 bg-slate-50 px-5 py-2 text-sm text-slate-500">
+                <p className="font-semibold text-slate-700">{doctorName}</p>
+                <p className="text-xs">{user?.correo || "Sin correo"}</p>
+              </div>
             </div>
           </header>
 
@@ -319,15 +356,15 @@ export default function CitasDoctor() {
               <article className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm lg:col-span-2">
                 <p className="mb-2 text-sm font-semibold text-slate-500">Proxima Consulta</p>
                 {nextCita ? (
-                  <div className="flex items-end justify-between">
-                    <div>
+                  <div className="flex items-end justify-between gap-5">
+                    <div className="min-w-0">
                       <p className="text-4xl font-semibold text-blue-700">
                         {timeText(nextCita.hora_inicio)}
                       </p>
-                      <p className="mt-1 font-semibold">{nextCita.paciente?.nombre_completo}</p>
+                      <p className="mt-1 truncate font-semibold">{nextCita.paciente?.nombre_completo}</p>
                       <p className="text-sm text-slate-400 capitalize">{formatLongDate(nextCita.fecha)}</p>
                     </div>
-                    <span className="rounded-md bg-blue-50 px-3 py-2 text-xs font-semibold uppercase text-blue-700">
+                    <span className="shrink-0 rounded-md bg-blue-50 px-3 py-2 text-xs font-semibold uppercase text-blue-700">
                       Confirmada
                     </span>
                   </div>
@@ -338,7 +375,7 @@ export default function CitasDoctor() {
 
               <article className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
                 <p className="mb-8 text-sm font-semibold text-slate-500">Total Citas</p>
-                <p className="text-4xl font-semibold">{viewMode === "hoy" ? todayCitas.length : sortedCitas.length}</p>
+                <p className="text-4xl font-semibold">{sortedCitas.length}</p>
               </article>
 
               <article className="rounded-2xl border border-slate-100 bg-blue-50 p-6 shadow-sm">
@@ -349,21 +386,33 @@ export default function CitasDoctor() {
 
             <div className="mb-5 flex items-center justify-between">
               <h3 className="text-xl font-semibold">Cronograma</h3>
-              <div className="flex rounded-full border border-slate-100 bg-white p-1 text-sm font-semibold shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setViewMode("hoy")}
-                  className={`rounded-full px-4 py-2 ${viewMode === "hoy" ? "bg-blue-700 text-white" : "text-slate-500"}`}
+              <div className="flex flex-wrap items-center justify-end gap-3">
+                <select
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value)}
+                  className="rounded-full border border-slate-100 bg-white px-4 py-2 text-sm font-semibold text-slate-600 outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  Hoy
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode("semana")}
-                  className={`rounded-full px-4 py-2 ${viewMode === "semana" ? "bg-blue-700 text-white" : "text-slate-500"}`}
-                >
-                  Semana
-                </button>
+                  <option value="todas">Todas</option>
+                  <option value="pendiente">Pendientes</option>
+                  <option value="cancelada">Canceladas</option>
+                  <option value="completada">Completadas</option>
+                </select>
+                <div className="flex rounded-full border border-slate-100 bg-white p-1 text-sm font-semibold shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("hoy")}
+                    className={`rounded-full px-4 py-2 ${viewMode === "hoy" ? "bg-blue-700 text-white" : "text-slate-500"}`}
+                  >
+                    Hoy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("semana")}
+                    className={`rounded-full px-4 py-2 ${viewMode === "semana" ? "bg-blue-700 text-white" : "text-slate-500"}`}
+                  >
+                    Todas
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -435,37 +484,51 @@ export default function CitasDoctor() {
       {selectedCita && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/35 p-6">
           <section className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-[2rem] bg-gray-50 shadow-2xl">
-            <header className="flex items-center justify-between border-b border-slate-100 bg-white px-8 py-5">
-              <div className="flex items-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => setSelectedCita(null)}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 text-xl font-semibold text-slate-600 hover:bg-slate-100"
-                  aria-label="Volver a agenda"
-                >
-                  &lt;
-                </button>
+            <header className="relative flex flex-wrap items-center justify-center gap-4 border-b border-slate-100 bg-white px-8 py-5">
+              <button
+                type="button"
+                onClick={() => setSelectedCita(null)}
+                className="absolute left-8 flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 text-xl font-semibold text-slate-600 hover:bg-slate-100"
+                aria-label="Volver a agenda"
+              >
+                &lt;
+              </button>
+              <div className="w-full text-center">
                 <h2 className="text-2xl font-semibold">Detalle de cita</h2>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className="rounded-full bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-700">
+                <p className="mt-1 text-sm font-semibold text-blue-700">
                   Proxima: {timeText(nextCita?.hora_inicio) || "--:--"} hs
-                </span>
+                </p>
               </div>
             </header>
 
-            <div className="grid gap-6 p-8 lg:grid-cols-[2fr_1fr]">
-              <div className="space-y-6">
+            <div className="p-8">
+              <div className="mx-auto max-w-4xl space-y-6">
                 <article className="rounded-3xl border border-slate-100 bg-white p-8 shadow-sm">
-                  <div className="mb-8 flex items-center gap-5">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-2xl font-semibold text-blue-700">
-                      {selectedCita.paciente?.nombre?.[0] || "P"}
+                  <div className="mb-8 flex flex-wrap items-center justify-between gap-5">
+                    <div className="flex min-w-0 items-center gap-5">
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-2xl font-semibold text-blue-700">
+                        {selectedCita.paciente?.nombre?.[0] || "P"}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-3xl font-semibold">{selectedCita.paciente?.nombre_completo}</h3>
+                        <p className="text-sm font-semibold text-slate-400">
+                          ID: {selectedCita.paciente?.id_paciente?.slice(0, 8) || "N/A"} - Paciente
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-3xl font-semibold">{selectedCita.paciente?.nombre_completo}</h3>
-                      <p className="text-sm font-semibold text-slate-400">
-                        ID: {selectedCita.paciente?.id_paciente?.slice(0, 8) || "N/A"} - Paciente
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-100 px-6 py-4 text-center">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                        Estado
+                      </p>
+                      <span className="mt-2 inline-flex rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-slate-700 shadow-sm">
+                        {statusLabel(selectedCita.estado)}
+                      </span>
+                      <p className="mt-3 text-sm font-semibold capitalize text-slate-600">
+                        {selectedCita.fecha === today ? "Hoy" : formatLongDate(selectedCita.fecha)}
+                      </p>
+                      <p className="mt-1 text-3xl font-bold text-slate-800">
+                        {timeText(selectedCita.hora_inicio)}
                       </p>
                     </div>
                   </div>
@@ -490,75 +553,35 @@ export default function CitasDoctor() {
                   </div>
                 </article>
 
-                <div className="grid grid-cols-2 gap-4 rounded-3xl border border-slate-100 bg-white p-2 shadow-sm">
+                <div className="flex flex-wrap justify-center gap-3">
+                  {selectedCita.estado === "pendiente" && (
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => handleComplete(selectedCita)}
+                      className="rounded-xl bg-emerald-600 px-8 py-4 text-sm font-semibold text-white shadow-lg hover:bg-emerald-700 disabled:bg-emerald-300"
+                    >
+                      Completar
+                    </button>
+                  )}
                   <button
                     type="button"
-                    className="rounded-2xl bg-white px-5 py-5 text-sm font-semibold text-blue-700 shadow-sm ring-1 ring-slate-100"
-                  >
-                    Completar Cita
-                  </button>
-                  <button
-                    type="button"
+                    disabled={selectedCita.estado !== "pendiente" || saving}
                     onClick={() => handleCancel(selectedCita)}
-                    className="rounded-2xl px-5 py-5 text-sm font-semibold text-red-600 hover:bg-red-50"
+                    className="rounded-xl bg-blue-600 px-8 py-4 text-sm font-semibold text-white shadow-lg hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400"
                   >
                     Cancelar
                   </button>
+                  <button
+                    type="button"
+                    disabled={selectedCita.estado !== "pendiente" || saving}
+                    onClick={() => openReschedule(selectedCita)}
+                    className="rounded-xl bg-blue-600 px-8 py-4 text-sm font-semibold text-white shadow-lg hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400"
+                  >
+                    Reagendar
+                  </button>
                 </div>
-
-                <article className="rounded-3xl border border-slate-100 bg-white p-8 shadow-sm">
-                  <label className="mb-4 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    Nota medica (opcional)
-                  </label>
-                  <textarea
-                    value={notaMedica}
-                    onChange={(event) => setNotaMedica(event.target.value)}
-                    rows="7"
-                    placeholder="Ingrese observaciones, diagnostico preventivo o derivaciones..."
-                    className="w-full resize-none rounded-2xl bg-slate-100 p-5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <div className="mt-5 flex justify-end gap-3">
-                    <button
-                      type="button"
-                      onClick={() => openReschedule(selectedCita)}
-                      className="rounded-xl bg-blue-600 px-6 py-4 text-sm font-semibold text-white shadow-lg hover:bg-blue-700"
-                    >
-                      Reagendar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setNotice("Nota guardada visualmente. Falta endpoint de nota medica.")}
-                      className="rounded-xl bg-blue-700 px-6 py-4 text-sm font-semibold text-white shadow-lg hover:bg-blue-800"
-                    >
-                      Guardar y Finalizar
-                    </button>
-                  </div>
-                </article>
               </div>
-
-              <aside className="space-y-6">
-                <article className="rounded-3xl border border-slate-100 bg-blue-50 p-8 text-center shadow-sm">
-                  <p className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Estado actual
-                  </p>
-                  <span className="inline-flex rounded-full bg-white px-5 py-3 font-semibold text-blue-700">
-                    {statusLabel(selectedCita.estado)}
-                  </span>
-                  <p className="mt-5 text-sm font-semibold text-blue-700">
-                    {selectedCita.fecha === today ? "Hoy" : formatLongDate(selectedCita.fecha)},{" "}
-                    {timeText(selectedCita.hora_inicio)} hs
-                  </p>
-                </article>
-
-                <article className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-                 
-                 
-                </article>
-
-                <article className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-                 
-                </article>
-              </aside>
             </div>
           </section>
         </div>

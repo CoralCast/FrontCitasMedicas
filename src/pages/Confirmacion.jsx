@@ -81,8 +81,8 @@ export default function Confirmacion() {
       </aside>
 
       <main className="flex-1 p-8">
-        <div className="flex justify-between items-center mb-10">
-          <div>
+        <div className="flex items-center justify-center mb-10">
+          <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-800">Confirmacion</h1>
             <p className="text-gray-500">
               {cita ? "Tu cita ha sido registrada" : "No hay una cita reciente para mostrar"}

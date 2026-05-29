@@ -2,16 +2,20 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   clearSession,
+  completeCita,
   createBloqueoDoctor,
   createDoctor,
   createHorarioDoctor,
   deleteBloqueoDoctor,
   deleteHorarioDoctor,
   getBloqueosDoctor,
+  getCitaClinica,
   getCitasClinica,
+  getDoctorAdmin,
   getDoctoresAdmin,
   getEspecialidades,
   getHorariosDoctor,
+  getPacienteClinica,
   getPacientesClinica,
   getStoredUser,
   updateDoctor,
@@ -72,6 +76,28 @@ function formatDateTime(value) {
   })
 }
 
+function timeText(value) {
+  return String(value || "").slice(0, 5)
+}
+
+function citaDateTime(cita) {
+  return new Date(`${cita.fecha}T${timeText(cita.hora_inicio) || "00:00"}`).getTime()
+}
+
+function sortClosestCitas(citas) {
+  const now = Date.now()
+
+  return [...citas].sort((a, b) => {
+    const aTime = citaDateTime(a)
+    const bTime = citaDateTime(b)
+    const aUpcoming = aTime >= now
+    const bUpcoming = bTime >= now
+
+    if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1
+    return aUpcoming ? aTime - bTime : bTime - aTime
+  })
+}
+
 export default function Admin() {
   const navigate = useNavigate()
   const user = getStoredUser()
@@ -82,13 +108,21 @@ export default function Admin() {
   const [citas, setCitas] = useState([])
   const [especialidades, setEspecialidades] = useState([])
   const [selectedDoctorId, setSelectedDoctorId] = useState("")
+  const [summaryFilter, setSummaryFilter] = useState("agenda")
+  const [appointmentStatusFilter, setAppointmentStatusFilter] = useState("todas")
   const [doctorForm, setDoctorForm] = useState(emptyDoctorForm)
   const [editForm, setEditForm] = useState(null)
+  const [selectedCita, setSelectedCita] = useState(null)
+  const [selectedDoctorDetail, setSelectedDoctorDetail] = useState(null)
+  const [selectedPaciente, setSelectedPaciente] = useState(null)
   const [horarioForm, setHorarioForm] = useState(emptyHorarioForm)
   const [bloqueoForm, setBloqueoForm] = useState(emptyBloqueoForm)
   const [horarios, setHorarios] = useState([])
   const [bloqueos, setBloqueos] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingCita, setLoadingCita] = useState(false)
+  const [loadingDoctorDetail, setLoadingDoctorDetail] = useState(false)
+  const [loadingPaciente, setLoadingPaciente] = useState(false)
   const [saving, setSaving] = useState(false)
   const [loadingDoctorData, setLoadingDoctorData] = useState(false)
   const [error, setError] = useState("")
@@ -101,9 +135,23 @@ export default function Admin() {
 
   const activeDoctors = doctores.filter((doctor) => doctor.activo)
   const inactiveDoctors = doctores.filter((doctor) => !doctor.activo)
-  const citasHoy = citas.filter((cita) => cita.fecha === today)
-  const citasPendientes = citas.filter((cita) => cita.estado === "pendiente")
+  const citasOrdenadas = useMemo(() => sortClosestCitas(citas), [citas])
+  const citasHoy = citasOrdenadas.filter((cita) => cita.fecha === today)
+  const citasPendientes = citasOrdenadas.filter((cita) => cita.estado === "pendiente")
+  const citasResumen = useMemo(() => {
+    const base = summaryFilter === "todayAppointments" ? citasHoy : citasOrdenadas
 
+    return appointmentStatusFilter === "todas"
+      ? base
+      : base.filter((cita) => cita.estado === appointmentStatusFilter)
+  }, [appointmentStatusFilter, citasHoy, citasOrdenadas, summaryFilter])
+  const summaryTitle = {
+    agenda: "Actividad de agenda",
+    activeDoctors: "Doctores activos",
+    inactiveDoctors: "Doctores inactivos",
+    patients: "Pacientes registrados",
+    todayAppointments: "Citas de hoy",
+  }[summaryFilter]
   async function loadDashboard() {
     setLoading(true)
     setError("")
@@ -261,6 +309,68 @@ export default function Admin() {
     }
   }
 
+  async function openPacienteDetail(idPaciente) {
+    setLoadingPaciente(true)
+    setError("")
+    setNotice("")
+
+    try {
+      const data = await getPacienteClinica(idPaciente)
+      setSelectedPaciente(data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoadingPaciente(false)
+    }
+  }
+
+  async function openCitaDetail(idCita) {
+    setLoadingCita(true)
+    setError("")
+    setNotice("")
+
+    try {
+      const data = await getCitaClinica(idCita)
+      setSelectedCita(data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoadingCita(false)
+    }
+  }
+
+  async function openDoctorDetail(idDoctor) {
+    setLoadingDoctorDetail(true)
+    setError("")
+    setNotice("")
+
+    try {
+      const data = await getDoctorAdmin(idDoctor)
+      setSelectedDoctorDetail(data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoadingDoctorDetail(false)
+    }
+  }
+
+  async function handleCompleteCita(cita) {
+    setSaving(true)
+    setError("")
+    setNotice("")
+
+    try {
+      await completeCita(cita.id_cita)
+      setNotice("Cita marcada como completada correctamente.")
+      setSelectedCita(null)
+      await loadDashboard()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function handleCreateHorario(event) {
     event.preventDefault()
     if (!selectedDoctorId) return
@@ -405,26 +515,28 @@ export default function Admin() {
 
         <main className="flex-1 bg-gray-50">
           <header className="border-b border-slate-100 bg-white px-8 py-6">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <div className="w-full text-center">
                 <h2 className="text-3xl font-semibold">Panel administrativo</h2>
                 <p className="text-sm font-semibold text-slate-500">
                   Gestiona doctores, horarios y bloqueos de agenda.
                 </p>
               </div>
 
-              <select
-                value={selectedDoctorId}
-                onChange={(event) => setSelectedDoctorId(event.target.value)}
-                className="w-full max-w-sm rounded-xl bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Seleccionar doctor</option>
-                {doctores.map((doctor) => (
-                  <option key={doctor.id_doctor} value={doctor.id_doctor}>
-                    {doctor.nombre_completo} - {doctor.especialidad || "Sin especialidad"}
-                  </option>
-                ))}
-              </select>
+              {(activeView === "horarios" || activeView === "bloqueos") && (
+                <select
+                  value={selectedDoctorId}
+                  onChange={(event) => setSelectedDoctorId(event.target.value)}
+                  className="w-full max-w-sm rounded-xl bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Seleccionar doctor</option>
+                  {doctores.map((doctor) => (
+                    <option key={doctor.id_doctor} value={doctor.id_doctor}>
+                      {doctor.nombre_completo} - {doctor.especialidad || "Sin especialidad"}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </header>
 
@@ -449,59 +561,187 @@ export default function Admin() {
                 {activeView === "resumen" && (
                   <div className="space-y-6">
                     <div className="grid gap-4 md:grid-cols-4">
-                      <article className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                      <button
+                        type="button"
+                        onClick={() => setSummaryFilter("activeDoctors")}
+                        className={`admin-summary-card rounded-none border p-5 text-left shadow-sm ${
+                          summaryFilter === "activeDoctors"
+                            ? "admin-summary-card-selected"
+                            : "border-slate-100 bg-white hover:border-blue-200"
+                        }`}
+                      >
                         <p className="text-sm font-semibold text-slate-500">Doctores activos</p>
                         <p className="mt-4 text-4xl font-semibold">{activeDoctors.length}</p>
-                      </article>
-                      <article className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSummaryFilter("inactiveDoctors")}
+                        className={`admin-summary-card rounded-none border p-5 text-left shadow-sm ${
+                          summaryFilter === "inactiveDoctors"
+                            ? "admin-summary-card-selected"
+                            : "border-slate-100 bg-white hover:border-blue-200"
+                        }`}
+                      >
                         <p className="text-sm font-semibold text-slate-500">Doctores inactivos</p>
                         <p className="mt-4 text-4xl font-semibold">{inactiveDoctors.length}</p>
-                      </article>
-                      <article className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSummaryFilter("patients")}
+                        className={`admin-summary-card rounded-none border p-5 text-left shadow-sm ${
+                          summaryFilter === "patients"
+                            ? "admin-summary-card-selected"
+                            : "border-slate-100 bg-white hover:border-blue-200"
+                        }`}
+                      >
                         <p className="text-sm font-semibold text-slate-500">Pacientes</p>
                         <p className="mt-4 text-4xl font-semibold">{pacientes.length}</p>
-                      </article>
-                      <article className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSummaryFilter("todayAppointments")}
+                        className={`admin-summary-card rounded-none border p-5 text-left shadow-sm ${
+                          summaryFilter === "todayAppointments"
+                            ? "admin-summary-card-selected"
+                            : "border-slate-100 bg-white hover:border-blue-200"
+                        }`}
+                      >
                         <p className="text-sm font-semibold text-slate-500">Citas hoy</p>
                         <p className="mt-4 text-4xl font-semibold text-blue-700">{citasHoy.length}</p>
-                      </article>
+                      </button>
                     </div>
 
                     <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-                      <div className="mb-5 flex items-center justify-between">
-                        <h3 className="text-xl font-semibold">Actividad de agenda</h3>
-                        <span className="rounded-full bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-700">
-                          {citasPendientes.length} pendientes
-                        </span>
+                      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                        <h3 className="text-xl font-semibold">{summaryTitle}</h3>
+                        <div className="flex flex-wrap items-center gap-3">
+                          {(summaryFilter === "agenda" || summaryFilter === "todayAppointments") && (
+                            <select
+                              value={appointmentStatusFilter}
+                              onChange={(event) => setAppointmentStatusFilter(event.target.value)}
+                              className="rounded-full border border-slate-100 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-600 outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="todas">Todas</option>
+                              <option value="pendiente">Pendientes</option>
+                              <option value="cancelada">Canceladas</option>
+                              <option value="completada">Completadas</option>
+                            </select>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setSummaryFilter("agenda")}
+                            className="rounded-full bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-700"
+                          >
+                            {summaryFilter === "agenda" ? `${citasPendientes.length} pendientes` : "Ver agenda"}
+                          </button>
+                        </div>
                       </div>
                       <div className="overflow-hidden rounded-xl border border-slate-100">
-                        <table className="w-full border-collapse text-left text-sm">
-                          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                            <tr>
-                              <th className="px-4 py-3">Fecha</th>
-                              <th className="px-4 py-3">Paciente</th>
-                              <th className="px-4 py-3">Doctor</th>
-                              <th className="px-4 py-3">Estado</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                            {citas.slice(0, 8).map((cita) => (
-                              <tr key={cita.id_cita}>
-                                <td className="px-4 py-4">
-                                  <p className="font-semibold">{cita.fecha}</p>
-                                  <p className="text-xs text-slate-500">{cita.hora_inicio}</p>
-                                </td>
-                                <td className="px-4 py-4">{cita.paciente?.nombre_completo}</td>
-                                <td className="px-4 py-4">{cita.doctor?.nombre_completo}</td>
-                                <td className="px-4 py-4">
-                                  <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                                    {cita.estado}
-                                  </span>
-                                </td>
+                        {(summaryFilter === "agenda" || summaryFilter === "todayAppointments") && (
+                          <table className="w-full border-collapse text-left text-sm">
+                            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                              <tr>
+                                <th className="px-4 py-3">Fecha</th>
+                                <th className="px-4 py-3">Paciente</th>
+                                <th className="px-4 py-3">Doctor</th>
+                                <th className="px-4 py-3">Estado</th>
+                                <th className="px-4 py-3 text-right">Detalle</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {citasResumen.slice(0, 8).map((cita) => (
+                                <tr key={cita.id_cita}>
+                                  <td className="px-4 py-4">
+                                    <p className="font-semibold">{cita.fecha}</p>
+                                    <p className="text-xs text-slate-500">{cita.hora_inicio}</p>
+                                  </td>
+                                  <td className="px-4 py-4">{cita.paciente?.nombre_completo}</td>
+                                  <td className="px-4 py-4">{cita.doctor?.nombre_completo}</td>
+                                  <td className="px-4 py-4">
+                                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                                      {cita.estado}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-4 text-right">
+                                    <button
+                                      type="button"
+                                      onClick={() => openCitaDetail(cita.id_cita)}
+                                      disabled={loadingCita}
+                                      className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:text-slate-400"
+                                    >
+                                      Ver detalle
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+
+                        {(summaryFilter === "activeDoctors" || summaryFilter === "inactiveDoctors") && (
+                          <table className="w-full border-collapse text-left text-sm">
+                            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                              <tr>
+                                <th className="px-4 py-3">Doctor</th>
+                                <th className="px-4 py-3">Especialidad</th>
+                                <th className="px-4 py-3">Correo</th>
+                                <th className="px-4 py-3">Estado</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {(summaryFilter === "activeDoctors" ? activeDoctors : inactiveDoctors).map((doctor) => (
+                                <tr key={doctor.id_doctor}>
+                                  <td className="px-4 py-4 font-semibold">{doctor.nombre_completo}</td>
+                                  <td className="px-4 py-4">{doctor.especialidad || "Sin especialidad"}</td>
+                                  <td className="px-4 py-4">{doctor.correo}</td>
+                                  <td className="px-4 py-4">
+                                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                                      {doctor.activo ? "activo" : "inactivo"}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+
+                        {summaryFilter === "patients" && (
+                          <table className="w-full border-collapse text-left text-sm">
+                            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                              <tr>
+                                <th className="px-4 py-3">Paciente</th>
+                                <th className="px-4 py-3">Parentesco</th>
+                                <th className="px-4 py-3">CURP</th>
+                                <th className="px-4 py-3">Estado</th>
+                                <th className="px-4 py-3 text-right">Detalle</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {pacientes.map((paciente) => (
+                                <tr key={paciente.id_paciente}>
+                                  <td className="px-4 py-4 font-semibold">{paciente.nombre_completo}</td>
+                                  <td className="px-4 py-4">{paciente.parentesco || "Sin parentesco"}</td>
+                                  <td className="px-4 py-4">{paciente.curp || "Sin CURP"}</td>
+                                  <td className="px-4 py-4">
+                                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                                      {paciente.activo ? "activo" : "inactivo"}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-4 text-right">
+                                    <button
+                                      type="button"
+                                      onClick={() => openPacienteDetail(paciente.id_paciente)}
+                                      disabled={loadingPaciente}
+                                      className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:text-slate-400"
+                                    >
+                                      Ver ficha
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
                       </div>
                     </section>
                   </div>
@@ -530,6 +770,14 @@ export default function Admin() {
                               <p className="text-xs text-slate-400">{doctor.correo}</p>
                             </div>
                             <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openDoctorDetail(doctor.id_doctor)}
+                                disabled={loadingDoctorDetail}
+                                className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:text-slate-400"
+                              >
+                                Ver ficha
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => startEditDoctor(doctor)}
@@ -877,6 +1125,193 @@ export default function Admin() {
           </section>
         </main>
       </div>
+
+      {selectedPaciente && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-6">
+          <section className="w-full max-w-2xl rounded-2xl border border-slate-100 bg-white p-6 shadow-2xl">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase text-blue-700">Ficha de paciente</p>
+                <h3 className="mt-1 text-2xl font-semibold">{selectedPaciente.nombre_completo}</h3>
+                <p className="text-sm font-semibold text-slate-500">
+                  ID: {selectedPaciente.id_paciente}
+                </p>
+              </div>
+              <span className="rounded-full bg-blue-50 px-4 py-2 text-xs font-semibold uppercase text-blue-700">
+                {selectedPaciente.activo ? "activo" : "inactivo"}
+              </span>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase text-slate-500">Nombre</p>
+                <p className="mt-1 font-semibold">{selectedPaciente.nombre || "Sin dato"}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase text-slate-500">Apellido</p>
+                <p className="mt-1 font-semibold">{selectedPaciente.apellido || "Sin dato"}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase text-slate-500">Sexo</p>
+                <p className="mt-1 font-semibold">{selectedPaciente.sexo || "Sin dato"}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase text-slate-500">Fecha de nacimiento</p>
+                <p className="mt-1 font-semibold">{selectedPaciente.fecha_nacimiento || "Sin dato"}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase text-slate-500">CURP</p>
+                <p className="mt-1 font-semibold">{selectedPaciente.curp || "Sin dato"}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase text-slate-500">Parentesco</p>
+                <p className="mt-1 font-semibold">{selectedPaciente.parentesco || "Sin dato"}</p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedPaciente(null)}
+                className="rounded-xl bg-blue-700 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-800"
+              >
+                Cerrar
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {selectedCita && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-6">
+          <section className="w-full max-w-3xl rounded-2xl border border-slate-100 bg-white p-6 shadow-2xl">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase text-blue-700">Detalle de cita</p>
+                <h3 className="mt-1 text-2xl font-semibold">
+                  {selectedCita.paciente?.nombre_completo || "Paciente sin dato"}
+                </h3>
+                <p className="text-sm font-semibold text-slate-500">
+                  ID: {selectedCita.id_cita}
+                </p>
+              </div>
+              <span className="rounded-full bg-blue-50 px-4 py-2 text-xs font-semibold uppercase text-blue-700">
+                {selectedCita.estado || "sin estado"}
+              </span>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase text-slate-500">Paciente</p>
+                <p className="mt-1 font-semibold">{selectedCita.paciente?.nombre_completo || "Sin dato"}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase text-slate-500">Doctor</p>
+                <p className="mt-1 font-semibold">{selectedCita.doctor?.nombre_completo || "Sin dato"}</p>
+                <p className="text-sm text-slate-500">{selectedCita.doctor?.especialidad || "Sin especialidad"}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase text-slate-500">Fecha</p>
+                <p className="mt-1 font-semibold">{selectedCita.fecha || "Sin dato"}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase text-slate-500">Horario</p>
+                <p className="mt-1 font-semibold">
+                  {timeText(selectedCita.hora_inicio) || "Sin hora"} - {timeText(selectedCita.hora_fin) || "Sin hora"}
+                </p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-4 md:col-span-2">
+                <p className="text-xs font-bold uppercase text-slate-500">Motivo</p>
+                <p className="mt-1 font-semibold">{selectedCita.motivo || "Sin motivo registrado"}</p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              {selectedCita.estado === "pendiente" && (
+                <button
+                  type="button"
+                  onClick={() => handleCompleteCita(selectedCita)}
+                  disabled={saving}
+                  className="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:bg-emerald-300"
+                >
+                  Completar cita
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setSelectedCita(null)}
+                className="rounded-xl bg-blue-700 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-800"
+              >
+                Cerrar
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {selectedDoctorDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-6">
+          <section className="w-full max-w-3xl rounded-2xl border border-slate-100 bg-white p-6 shadow-2xl">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase text-blue-700">Ficha de doctor</p>
+                <h3 className="mt-1 text-2xl font-semibold">{selectedDoctorDetail.nombre_completo}</h3>
+                <p className="text-sm font-semibold text-slate-500">
+                  ID: {selectedDoctorDetail.id_doctor}
+                </p>
+              </div>
+              <span className="rounded-full bg-blue-50 px-4 py-2 text-xs font-semibold uppercase text-blue-700">
+                {selectedDoctorDetail.activo ? "activo" : "inactivo"}
+              </span>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase text-slate-500">Nombre</p>
+                <p className="mt-1 font-semibold">{selectedDoctorDetail.nombre || "Sin dato"}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase text-slate-500">Apellido</p>
+                <p className="mt-1 font-semibold">{selectedDoctorDetail.apellido || "Sin dato"}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase text-slate-500">Especialidad</p>
+                <p className="mt-1 font-semibold">{selectedDoctorDetail.especialidad || "Sin especialidad"}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase text-slate-500">Precio de consulta</p>
+                <p className="mt-1 font-semibold">{formatMoney(selectedDoctorDetail.precio_consulta)}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase text-slate-500">Correo</p>
+                <p className="mt-1 font-semibold">{selectedDoctorDetail.correo || "Sin correo"}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase text-slate-500">Telefono</p>
+                <p className="mt-1 font-semibold">{selectedDoctorDetail.telefono || "Sin telefono"}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase text-slate-500">CURP</p>
+                <p className="mt-1 font-semibold">{selectedDoctorDetail.curp || "Sin CURP"}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase text-slate-500">Fecha de baja</p>
+                <p className="mt-1 font-semibold">{selectedDoctorDetail.fecha_baja || "Sin baja"}</p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedDoctorDetail(null)}
+                className="rounded-xl bg-blue-700 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-800"
+              >
+                Cerrar
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }

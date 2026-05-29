@@ -5,6 +5,7 @@ import {
   clearSession,
   getCitas,
   getDisponibilidad,
+  getPacientes,
   getStoredUser,
   rescheduleCita,
 } from "../services/api"
@@ -17,6 +18,30 @@ function formatDate(fecha) {
     month: "long",
     year: "numeric",
   })
+}
+
+function timeText(value) {
+  return String(value || "").slice(0, 5)
+}
+
+function citaDateTime(cita) {
+  return new Date(`${cita.fecha}T${timeText(cita.hora_inicio) || "00:00"}`).getTime()
+}
+
+function sortUpcomingCitas(citas) {
+  return [...citas].sort((a, b) => citaDateTime(a) - citaDateTime(b))
+}
+
+function sortPastCitas(citas) {
+  return [...citas].sort((a, b) => citaDateTime(b) - citaDateTime(a))
+}
+
+function isUpcomingCita(cita) {
+  return cita.estado === "pendiente" && citaDateTime(cita) >= Date.now()
+}
+
+function isCanceledCita(cita) {
+  return cita.estado === "cancelada"
 }
 
 function statusClass(estado) {
@@ -34,19 +59,40 @@ export default function Historial() {
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
   const [modalCita, setModalCita] = useState(null)
+  const [activeList, setActiveList] = useState("proximas")
+  const [pacientes, setPacientes] = useState([])
   const [nuevaFecha, setNuevaFecha] = useState("")
   const [nuevaHora, setNuevaHora] = useState("")
   const [horarios, setHorarios] = useState([])
   const [loadingHorarios, setLoadingHorarios] = useState(false)
 
   const proximas = useMemo(
-    () => citas.filter((cita) => cita.estado === "pendiente"),
+    () => sortUpcomingCitas(citas.filter(isUpcomingCita)),
     [citas],
   )
   const historial = useMemo(
-    () => citas.filter((cita) => cita.estado !== "pendiente"),
+    () =>
+      sortPastCitas(
+        citas.filter(
+          (cita) => !isCanceledCita(cita) && (cita.estado === "completada" || citaDateTime(cita) < Date.now()),
+        ),
+      ),
     [citas],
   )
+  const canceladas = useMemo(
+    () => sortPastCitas(citas.filter(isCanceledCita)),
+    [citas],
+  )
+  const pacienteTitular = useMemo(
+    () =>
+      pacientes.find((item) => item.parentesco?.toLowerCase() === "titular") ||
+      pacientes[0],
+    [pacientes],
+  )
+  const displayPatientName =
+    pacienteTitular?.nombre_completo ||
+    user?.correo ||
+    "Usuario"
 
   async function loadCitas({ showLoading = true } = {}) {
     if (showLoading) {
@@ -56,7 +102,13 @@ export default function Historial() {
 
     try {
       // Guia: GET /citas/me regresa las citas segun el rol del usuario.
-      setCitas(await getCitas())
+      const [citasData, pacientesData] = await Promise.all([
+        getCitas(),
+        getPacientes(),
+      ])
+
+      setCitas(citasData)
+      setPacientes(pacientesData.filter((item) => item.activo))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -130,7 +182,7 @@ export default function Historial() {
     setNotice("")
 
     if (!modalCita || !nuevaFecha || !nuevaHora) {
-      setError("Selecciona una nueva fecha y horario.")
+      setError("Selecciona una nueva fecha y un horario disponible para reagendar.")
       return
     }
 
@@ -141,7 +193,7 @@ export default function Historial() {
         fecha: nuevaFecha,
         hora_inicio: nuevaHora,
       })
-      setNotice("Cita reprogramada correctamente.")
+      setNotice("Cita reagendada correctamente.")
       setModalCita(null)
       await loadCitas()
     } catch (err) {
@@ -194,7 +246,7 @@ export default function Historial() {
   }
 
   return (
-    <div className={`min-h-screen bg-gray-100 flex ${sidebarOpen ? "sidebar-open" : ""}`}>
+    <div className={`appointment-page h-screen overflow-hidden bg-gray-100 flex ${sidebarOpen ? "sidebar-open" : ""}`}>
       <button
         type="button"
         className="mobile-menu-button"
@@ -211,12 +263,12 @@ export default function Historial() {
         onClick={() => setSidebarOpen(false)}
         aria-label="Cerrar menu"
       />
-      <aside className="app-sidebar w-72 bg-white shadow-lg p-6 flex flex-col justify-between">
+      <aside className="app-sidebar appointment-sidebar w-72 shrink-0 bg-white border-r border-slate-100 p-6 flex flex-col justify-between">
         <div>
           <div className="flex items-center gap-3 mb-10">
             <div className="w-12 h-12 rounded-full bg-blue-500" />
             <div>
-              <h2 className="font-bold text-gray-800">{user?.correo || "Usuario"}</h2>
+              <h2 className="font-bold text-gray-800">{displayPatientName}</h2>
               <p className="text-sm text-gray-500">{user?.rol || "cliente"}</p>
             </div>
           </div>
@@ -224,13 +276,13 @@ export default function Historial() {
           <nav className="space-y-3">
             <Link
               to="/cita"
-              className="block w-full text-left text-gray-600 hover:bg-gray-100 px-4 py-3 rounded-xl"
+              className="appointment-nav-item block w-full text-left text-gray-600 hover:bg-gray-100 px-4 py-3 rounded-xl"
             >
               Agendar Cita
             </Link>
             <Link
               to="/historial"
-              className="block w-full text-left bg-blue-100 text-blue-700 font-semibold px-4 py-3 rounded-xl"
+              className="appointment-nav-item block w-full text-left bg-blue-50 text-blue-700 font-semibold px-4 py-3 rounded-xl"
             >
               Historial
             </Link>
@@ -240,15 +292,15 @@ export default function Historial() {
         <button
           type="button"
           onClick={logout}
-          className="block w-full text-left text-red-500 hover:bg-red-50 px-4 py-3 rounded-xl"
+          className="appointment-logout block w-full text-left text-red-500 hover:bg-red-50 px-4 py-3 rounded-xl"
         >
           Cerrar sesion
         </button>
       </aside>
 
-      <main className="flex-1 p-8">
+      <main className="appointment-main h-screen flex-1 overflow-y-auto p-8">
         <div className="max-w-5xl mx-auto space-y-8">
-          <div>
+          <div className="text-center">
             <h1 className="text-4xl font-bold text-gray-800">Historial de Consultas</h1>
             <p className="text-gray-500 mt-2">Consulta tus citas agendadas y anteriores</p>
           </div>
@@ -268,6 +320,43 @@ export default function Historial() {
             <div className="bg-white rounded-3xl p-8 shadow-sm">Cargando citas...</div>
           ) : (
             <>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => setActiveList("proximas")}
+                  className={`rounded-xl px-5 py-3 font-semibold ${
+                    activeList === "proximas"
+                      ? "bg-blue-700 text-white"
+                      : "bg-white text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  Proximas citas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveList("anteriores")}
+                  className={`rounded-xl px-5 py-3 font-semibold ${
+                    activeList === "anteriores"
+                      ? "bg-blue-700 text-white"
+                      : "bg-white text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  Citas anteriores
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveList("canceladas")}
+                  className={`rounded-xl px-5 py-3 font-semibold ${
+                    activeList === "canceladas"
+                      ? "bg-blue-700 text-white"
+                      : "bg-white text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  Canceladas
+                </button>
+              </div>
+
+              {activeList === "proximas" && (
               <section>
                 <h2 className="text-2xl font-bold text-gray-800 mb-5">Proximas Citas</h2>
                 <div className="space-y-5">
@@ -278,7 +367,7 @@ export default function Historial() {
                   ) : (
                     <div className="border-2 border-dashed border-gray-200 rounded-3xl p-12 text-center">
                       <h3 className="text-xl font-bold text-gray-800">No hay citas pendientes</h3>
-                      <p className="text-gray-500 mt-2 mb-6">Agenda tu proxima cita medica</p>
+                      <p className="text-gray-500 mt-2 mb-6">Agenda tu proxima cita medica.</p>
                       <Link
                         to="/cita"
                         className="inline-block bg-blue-700 hover:bg-blue-800 text-white px-8 py-4 rounded-xl font-semibold shadow-lg"
@@ -289,7 +378,9 @@ export default function Historial() {
                   )}
                 </div>
               </section>
+              )}
 
+              {activeList === "anteriores" && (
               <section>
                 <h2 className="text-2xl font-bold text-gray-800 mb-5">Citas Anteriores</h2>
                 <div className="space-y-5">
@@ -297,11 +388,27 @@ export default function Historial() {
                     historial.map((cita) => <CitaRow key={cita.id_cita} cita={cita} />)
                   ) : (
                     <p className="bg-white rounded-2xl p-6 text-gray-500 shadow-sm">
-                      Aun no hay citas completadas o canceladas.
+                      Aun no hay citas anteriores.
                     </p>
                   )}
                 </div>
               </section>
+              )}
+
+              {activeList === "canceladas" && (
+              <section>
+                <h2 className="text-2xl font-bold text-gray-800 mb-5">Citas Canceladas</h2>
+                <div className="space-y-5">
+                  {canceladas.length > 0 ? (
+                    canceladas.map((cita) => <CitaRow key={cita.id_cita} cita={cita} />)
+                  ) : (
+                    <p className="bg-white rounded-2xl p-6 text-gray-500 shadow-sm">
+                      No hay citas canceladas.
+                    </p>
+                  )}
+                </div>
+              </section>
+              )}
             </>
           )}
         </div>

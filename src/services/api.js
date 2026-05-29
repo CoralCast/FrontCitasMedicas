@@ -34,6 +34,72 @@ export function clearSession() {
   localStorage.removeItem(USER_KEY)
 }
 
+function normalizeText(value) {
+  return String(value || "")
+    .replaceAll("Ã¡", "á")
+    .replaceAll("Ã©", "é")
+    .replaceAll("Ã­", "í")
+    .replaceAll("Ã³", "ó")
+    .replaceAll("Ãº", "ú")
+    .replaceAll("Ã±", "ñ")
+    .replaceAll("Ã", "Á")
+    .replaceAll("Ã‰", "É")
+    .replaceAll("Ã", "Í")
+    .replaceAll("Ã“", "Ó")
+    .replaceAll("Ãš", "Ú")
+    .replaceAll("Ã‘", "Ñ")
+}
+
+function friendlyErrorMessage(message, status) {
+  const normalized = normalizeText(Array.isArray(message) ? message.map((item) => item.msg).join(", ") : message)
+  const text = normalized.toLowerCase()
+
+  if (status === 401) return "Tu sesión expiró. Inicia sesión nuevamente."
+  if (status === 403) return "No tienes permisos para realizar esta acción."
+  if (status === 404) return "No se encontró la información solicitada."
+  if (status === 429) return "Se hicieron demasiados intentos. Espera un momento e intenta de nuevo."
+
+  if (text.includes("correo") && text.includes("contraseña")) {
+    return "Correo o contraseña incorrectos. Revisa tus datos e intenta de nuevo."
+  }
+  if (text.includes("contraseñas no coinciden")) return "Las contraseñas no coinciden."
+  if (text.includes("ya existe") && text.includes("correo")) return "Ya existe una cuenta con este correo."
+  if (text.includes("ya existe") && text.includes("teléfono")) return "Ya existe una cuenta con este teléfono."
+  if (text.includes("ya existe") && text.includes("curp")) return "Ya existe un paciente registrado con esa CURP."
+  if (text.includes("clínica no válida") || text.includes("clinica no valida")) {
+    return "La clínica seleccionada no está disponible. Elige otra clínica."
+  }
+  if (text.includes("cita ya está cancelada") || text.includes("cita ya esta cancelada")) {
+    return "Esta cita ya está cancelada."
+  }
+  if (text.includes("al menos 24 horas")) {
+    return "Solo puedes cancelar citas con al menos 24 horas de anticipación."
+  }
+  if (text.includes("no pertenecen") || text.includes("propias citas")) {
+    return "No tienes permisos para modificar esta cita."
+  }
+  if (text.includes("horario bloqueado")) return "Este horario está bloqueado. Elige otro horario."
+  if (text.includes("conflicto con otra cita")) return "Ese horario ya no está disponible. Elige otro horario."
+  if (text.includes("fuera del horario")) return "El horario seleccionado está fuera de la agenda del doctor."
+  if (text.includes("doctor está inactivo") || text.includes("doctor esta inactivo")) {
+    return "El doctor está inactivo, no se pueden crear citas con este doctor."
+  }
+  if (text.includes("no se puede reprogramar una cita cancelada")) {
+    return "No puedes reagendar una cita cancelada."
+  }
+  if (text.includes("no se puede completar una cita cancelada")) {
+    return "No puedes completar una cita cancelada."
+  }
+  if (text.includes("solo puedes completar tus propias citas")) {
+    return "Solo puedes completar tus propias citas."
+  }
+  if (text.includes("estado completada")) {
+    return "No se encontro el estado completada en la base de datos."
+  }
+
+  return normalized || "No se pudo completar la acción. Verifica la información e intenta de nuevo."
+}
+
 async function request(path, options = {}) {
   const { skipAuth = false, ...fetchOptions } = options
   const token = getToken()
@@ -49,10 +115,15 @@ async function request(path, options = {}) {
     headers.set("Authorization", `Bearer ${token}`)
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...fetchOptions,
-    headers,
-  })
+  let response
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...fetchOptions,
+      headers,
+    })
+  } catch {
+    throw new Error("No se pudo conectar con el servidor. Verifica que el sistema esté activo.")
+  }
 
   let data = null
   const contentType = response.headers.get("content-type") || ""
@@ -66,7 +137,7 @@ async function request(path, options = {}) {
     if (response.status === 401) {
       clearSession()
     }
-    throw new Error(Array.isArray(message) ? message.map((item) => item.msg).join(", ") : message)
+    throw new Error(friendlyErrorMessage(message, response.status))
   }
 
   return data
@@ -271,6 +342,13 @@ export function createCita(cita) {
 export function cancelCita(idCita) {
   // Contrato de la guia: cancelar cita no requiere body.
   return request(`/citas/${idCita}/cancelar`, {
+    method: "PATCH",
+  })
+}
+
+export function completeCita(idCita) {
+  // Backend nuevo: doctores, recepcionistas y admins pueden marcar cita completada.
+  return request(`/citas/${idCita}/completar`, {
     method: "PATCH",
   })
 }
